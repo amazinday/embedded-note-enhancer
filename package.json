@@ -1,6 +1,6 @@
 {
 	"name": "embedded-note-enhancer",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "为嵌入的笔记添加可点击的标题栏，支持折叠/展开和原地编辑功能",
 	"main": "main.js",
 	"scripts": {
