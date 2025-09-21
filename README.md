@@ -1,6 +1,8 @@
 # Embedded Note Enhancer
 
-> 为 Obsidian 中的嵌入笔记添加可交互的标题栏，支持折叠/展开、原地编辑和快速跳转功能
+为 Obsidian 中的嵌入笔记添加可交互的标题栏，支持折叠/展开、原地编辑和快速跳转功能
+
+> 我没有Typescript研发经验，这款插件是我和 AI 共同完成，作为 Beta 版请谨慎使用。
 
 [![GitHub release](https://img.shields.io/github/v/release/amazinday/embedded-note-enhancer)](https://github.com/amazinday/embedded-note-enhancer/releases)
 [![GitHub downloads](https://img.shields.io/github/downloads/amazinday/embedded-note-enhancer/total)](https://github.com/amazinday/embedded-note-enhancer/releases)
