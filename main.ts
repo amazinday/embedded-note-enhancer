@@ -1468,12 +1468,28 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				}
 			} else {
 				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Enabling inline editing for block ${blockId}`);
-				this.enableInlineEditing(block);
-				block.setAttribute('data-editing', 'true');
-				editBtn.textContent = '完成';
-				// 进入编辑时隐藏折叠图标
-				const icon = titleBar.querySelector('.embedded-note-collapse-icon') as HTMLElement | null;
-				if (icon) icon.style.display = 'none';
+				
+				// 如果块处于折叠状态，先展开它
+				if (block.classList.contains('embedded-note-collapsed')) {
+					this.toggleBlockCollapse(blockId);
+					// 等待展开完成后再启用编辑
+					setTimeout(() => {
+						this.enableInlineEditing(block);
+						block.setAttribute('data-editing', 'true');
+						editBtn.textContent = '完成';
+						// 进入编辑时隐藏折叠图标
+						const icon = titleBar.querySelector('.embedded-note-collapse-icon') as HTMLElement | null;
+						if (icon) icon.style.display = 'none';
+					}, 100); // 短暂延迟确保展开完成
+				} else {
+					// 如果已经展开，直接启用编辑
+					this.enableInlineEditing(block);
+					block.setAttribute('data-editing', 'true');
+					editBtn.textContent = '完成';
+					// 进入编辑时隐藏折叠图标
+					const icon = titleBar.querySelector('.embedded-note-collapse-icon') as HTMLElement | null;
+					if (icon) icon.style.display = 'none';
+				}
 			}
 		};
 		this.addTrackedEventListener(editBtn, 'click', onEditClick as any);

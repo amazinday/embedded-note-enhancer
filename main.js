@@ -1233,12 +1233,24 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       } else {
         if (this.debugVerbose)
           console.log(`[EmbeddedNoteEnhancer] Enabling inline editing for block ${blockId}`);
-        this.enableInlineEditing(block);
-        block.setAttribute("data-editing", "true");
-        editBtn.textContent = "\u5B8C\u6210";
-        const icon = titleBar.querySelector(".embedded-note-collapse-icon");
-        if (icon)
-          icon.style.display = "none";
+        if (block.classList.contains("embedded-note-collapsed")) {
+          this.toggleBlockCollapse(blockId);
+          setTimeout(() => {
+            this.enableInlineEditing(block);
+            block.setAttribute("data-editing", "true");
+            editBtn.textContent = "\u5B8C\u6210";
+            const icon = titleBar.querySelector(".embedded-note-collapse-icon");
+            if (icon)
+              icon.style.display = "none";
+          }, 100);
+        } else {
+          this.enableInlineEditing(block);
+          block.setAttribute("data-editing", "true");
+          editBtn.textContent = "\u5B8C\u6210";
+          const icon = titleBar.querySelector(".embedded-note-collapse-icon");
+          if (icon)
+            icon.style.display = "none";
+        }
       }
     };
     this.addTrackedEventListener(editBtn, "click", onEditClick);
