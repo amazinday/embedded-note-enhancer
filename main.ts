@@ -1,6 +1,6 @@
 import { Plugin, TFile, MarkdownView, App, PluginSettingTab, Setting, MarkdownRenderer } from 'obsidian';
 
-interface EmbeddedNoteTitlesSettings {
+interface EmbeddedNoteEnhancerSettings {
 	fontSize: string;
 	showCollapseIcon: boolean;
 	showEditButton: boolean;
@@ -12,7 +12,7 @@ interface EmbeddedNoteTitlesSettings {
 	collapseStates: Record<string, boolean>;
 }
 
-const DEFAULT_SETTINGS: EmbeddedNoteTitlesSettings = {
+const DEFAULT_SETTINGS: EmbeddedNoteEnhancerSettings = {
 	fontSize: '14px',
 	showCollapseIcon: true,
 	showEditButton: true,
@@ -24,8 +24,8 @@ const DEFAULT_SETTINGS: EmbeddedNoteTitlesSettings = {
 	collapseStates: {}
 };
 
-export default class EmbeddedNoteTitlesPlugin extends Plugin {
-	settings!: EmbeddedNoteTitlesSettings;
+export default class EmbeddedNoteEnhancerPlugin extends Plugin {
+	settings!: EmbeddedNoteEnhancerSettings;
 	public collapseStates: Map<string, boolean> = new Map();
 	public embeddedBlocks: Map<string, HTMLElement> = new Map();
 	private mutationObserver?: MutationObserver;
@@ -131,14 +131,14 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	}
 
 	async onload() {
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Plugin loading...');
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Plugin loading...');
 		await this.loadSettings();
 
 		// 恢复保存的折叠状态
 		this.restoreCollapseStates();
 
 		// 添加设置标签页
-		this.addSettingTab(new EmbeddedNoteTitlesSettingTab(this.app, this));
+			this.addSettingTab(new EmbeddedNoteEnhancerSettingTab(this.app, this));
 
 		// 初始化插件功能
 			this.initializePlugin();
@@ -152,7 +152,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		Object.entries(this.settings.collapseStates).forEach(([blockId, isCollapsed]) => {
 			this.collapseStates.set(blockId, isCollapsed);
 		});
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Restored collapse states:', this.settings.collapseStates);
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Restored collapse states:', this.settings.collapseStates);
 	}
 
 	/**
@@ -162,7 +162,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		// 将内存中的折叠状态保存到设置中
 		this.settings.collapseStates = Object.fromEntries(this.collapseStates);
 		this.saveSettings();
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Saved collapse states:', this.settings.collapseStates);
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Saved collapse states:', this.settings.collapseStates);
 	}
 
 	/**
@@ -178,7 +178,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 				const isCollapsed = this.collapseStates.get(blockId);
 				if (isCollapsed !== undefined) {
 					this.setBlockCollapsed(block as HTMLElement, isCollapsed);
-					if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Applied saved collapse state for ${blockId}: ${isCollapsed}`);
+					if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Applied saved collapse state for ${blockId}: ${isCollapsed}`);
 				}
 			}
 		});
@@ -264,7 +264,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		);
 
 		// 初始处理
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Starting initial processing...');
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Starting initial processing...');
 		this.processEmbeddedBlocks();
 		// 冷启动自愈扫描：在短时间内高频尝试，直到嵌入数量稳定
 		this.startBootstrapSweep();
@@ -287,10 +287,10 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		// 设置定期检查，确保嵌套嵌入在文件修改后能够被正确处理
 		this.setupPeriodicCheck();
 		
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Plugin loaded successfully');
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Plugin loaded successfully');
 		
-		// 添加全局方法用于手动触发处理（调试用）
-		(window as any).embeddedNoteTitlesPlugin = this;
+			// 添加全局方法用于手动触发处理（调试用）
+			(window as any).embeddedNoteEnhancerPlugin = this;
 		
 	}
 
@@ -308,7 +308,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 				clearInterval(this.bootstrapSweepInterval!);
 				this.bootstrapSweepInterval = undefined;
 				// 自愈扫描完成
-				if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Bootstrap sweep completed');
+				if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Bootstrap sweep completed');
 				return;
 			}
 			this.lastEmbeddedCount = current;
@@ -324,7 +324,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		
 		// 检查是否为图片嵌入，如果是则跳过样式应用
 		if (this.isImageEmbed(block)) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping style application for image embed:`, block);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping style application for image embed:`, block);
 			return;
 		}
 		
@@ -353,11 +353,11 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	}
 
 	onunload() {
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Plugin unloading...');
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Plugin unloading...');
 		
 		
-		// 清理全局引用
-		try { delete (window as any).embeddedNoteTitlesPlugin; } catch {}
+							// 清理全局引用
+							try { delete (window as any).embeddedNoteEnhancerPlugin; } catch {}
 		
 		// 清理所有标题栏和还原DOM结构
 		this.removeAllTitleBars();
@@ -412,7 +412,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			}
 		} catch {}
 		
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Plugin unloaded successfully');
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Plugin unloaded successfully');
 	}
 
 	async loadSettings() {
@@ -532,7 +532,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			const unprocessedEmbeds = container.querySelectorAll('.markdown-embed:not([data-title-bar-added]), .internal-embed:not([data-title-bar-added])');
 			
 			if (unprocessedEmbeds.length > 0) {
-				// console.log(`[EmbeddedNoteTitles] Found ${unprocessedEmbeds.length} unprocessed embeds during periodic check`);
+				// console.log(`[EmbeddedNoteEnhancer] Found ${unprocessedEmbeds.length} unprocessed embeds during periodic check`);
 				unprocessedEmbeds.forEach((embedBlock) => {
 					this.processEmbeddedBlock(embedBlock as HTMLElement);
 				});
@@ -545,9 +545,9 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	 */
 	private addStyles() {
 		const styleEl = document.createElement('style');
-		styleEl.id = 'embedded-note-titles-styles';
+							styleEl.id = 'embedded-note-enhancer-styles';
 		styleEl.textContent = `
-			/* Embedded Note Titles Plugin Styles */
+							/* Embedded Note Enhancer Plugin Styles */
 			.embedded-note-title-bar {
 				position: relative;
 				z-index: 1;
@@ -859,7 +859,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			embeddedBlocks = container.querySelectorAll('[data-type="markdown-embed"]');
 		}
 		
-		this.logOnce('found-embeds-' + embeddedBlocks.length, `[EmbeddedNoteTitles] Found ${embeddedBlocks.length} embedded blocks in container`);
+		this.logOnce('found-embeds-' + embeddedBlocks.length, `[EmbeddedNoteEnhancer] Found ${embeddedBlocks.length} embedded blocks in container`);
 		
 		// 按层级顺序处理，确保父级嵌入块先被处理
 		const blocksArray = Array.from(embeddedBlocks) as HTMLElement[];
@@ -873,7 +873,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		blocksArray.forEach((block) => {
 			// 检查是否为图片嵌入，如果是则跳过处理
 			if (this.isImageEmbed(block)) {
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping image embed in main processing:`, block);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping image embed in main processing:`, block);
 				return;
 			}
 			
@@ -909,20 +909,20 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	private processNestedEmbeds(container: HTMLElement, depth: number = 0) {
 		// 防止无限递归，限制最大深度
 		if (depth > 10) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Maximum recursion depth reached in processNestedEmbeds`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Maximum recursion depth reached in processNestedEmbeds`);
 			return;
 		}
 
 		// 防止短时间内重复处理同一个容器
 		if (this.processingContainers.has(container)) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Container already being processed, skipping`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Container already being processed, skipping`);
 			return;
 		}
 
 		// 检查当前文件是否需要处理嵌套嵌入
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (activeView?.file && !this.shouldReprocessNestedEmbeds(activeView.file.path)) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping nested processing due to cache`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping nested processing due to cache`);
 			return;
 		}
 
@@ -931,7 +931,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		// 查找所有嵌入块，包括嵌套的
 		const allEmbeds = container.querySelectorAll('.markdown-embed, .internal-embed, [data-type="markdown-embed"]');
 		
-		this.logOnce('nested-total-' + allEmbeds.length, `[EmbeddedNoteTitles] Found ${allEmbeds.length} total embeds in nested processing`);
+		this.logOnce('nested-total-' + allEmbeds.length, `[EmbeddedNoteEnhancer] Found ${allEmbeds.length} total embeds in nested processing`);
 		
 		let hasNewEmbeds = false;
 		let processedCount = 0;
@@ -941,18 +941,18 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			// 检查是否为图片嵌入，如果是则跳过处理
 			if (this.isImageEmbed(embedBlock as HTMLElement)) {
 				imageEmbedCount++;
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping nested image embed:`, embedBlock);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping nested image embed:`, embedBlock);
 				return;
 			}
 			
 			// 只处理尚未处理的嵌入块
 			if (!embedBlock.hasAttribute('data-title-bar-added')) {
 			if (this.debugVerbose) {
-			console.log(`[EmbeddedNoteTitles] Processing nested embed:`, embedBlock);
-			console.log(`[EmbeddedNoteTitles] Block classes:`, embedBlock.className);
-			console.log(`[EmbeddedNoteTitles] Block attributes:`, Array.from(embedBlock.attributes).map(attr => `${attr.name}="${attr.value}"`));
-			console.log(`[EmbeddedNoteTitles] Block children:`, Array.from(embedBlock.children).map(child => `${child.tagName}.${child.className}`));
-			console.log(`[EmbeddedNoteTitles] Block parent:`, embedBlock.parentElement?.tagName, embedBlock.parentElement?.className);
+			console.log(`[EmbeddedNoteEnhancer] Processing nested embed:`, embedBlock);
+			console.log(`[EmbeddedNoteEnhancer] Block classes:`, embedBlock.className);
+			console.log(`[EmbeddedNoteEnhancer] Block attributes:`, Array.from(embedBlock.attributes).map(attr => `${attr.name}="${attr.value}"`));
+			console.log(`[EmbeddedNoteEnhancer] Block children:`, Array.from(embedBlock.children).map(child => `${child.tagName}.${child.className}`));
+			console.log(`[EmbeddedNoteEnhancer] Block parent:`, embedBlock.parentElement?.tagName, embedBlock.parentElement?.className);
 			}
 				this.processEmbeddedBlock(embedBlock as HTMLElement);
 				processedCount++;
@@ -967,7 +967,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		
 		// 如果发现了新的嵌入块，再次递归处理（处理多层嵌套）
 		if (hasNewEmbeds && processedCount > 0) {
-			this.logOnce('nested-processing-again', `[EmbeddedNoteTitles] Found new nested embeds, processing again...`);
+			this.logOnce('nested-processing-again', `[EmbeddedNoteEnhancer] Found new nested embeds, processing again...`);
 			setTimeout(() => {
 				this.processNestedEmbeds(container, depth + 1);
 			}, 50);
@@ -989,7 +989,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	 * 处理所有可能的嵌套嵌入（更全面的方法）
 	 */
 	private processAllNestedEmbeds(container: HTMLElement) {
-		this.logOnce('all-nested-start', `[EmbeddedNoteTitles] Processing all nested embeds with comprehensive method`);
+		this.logOnce('all-nested-start', `[EmbeddedNoteEnhancer] Processing all nested embeds with comprehensive method`);
 		
 		// 查找所有可能的嵌入块，使用更广泛的选择器
 		const allPossibleEmbeds = container.querySelectorAll(`
@@ -1002,7 +1002,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			.internal-embed-content .internal-embed
 		`);
 		
-		this.logOnce('all-nested-count-' + allPossibleEmbeds.length, `[EmbeddedNoteTitles] Found ${allPossibleEmbeds.length} possible embeds with comprehensive method`);
+		this.logOnce('all-nested-count-' + allPossibleEmbeds.length, `[EmbeddedNoteEnhancer] Found ${allPossibleEmbeds.length} possible embeds with comprehensive method`);
 		
 		// let processedCount = 0;
 		
@@ -1011,27 +1011,27 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			if (!embedBlock.hasAttribute('data-title-bar-added')) {
 				// 检查是否为图片嵌入，如果是则跳过处理
 				if (this.isImageEmbed(embedBlock as HTMLElement)) {
-					if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping comprehensive processing of image embed:`, embedBlock);
+					if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping comprehensive processing of image embed:`, embedBlock);
 					return;
 				}
 				
-				// console.log(`[EmbeddedNoteTitles] Comprehensive processing of embed:`, embedBlock);
-				// console.log(`[EmbeddedNoteTitles] Block classes:`, embedBlock.className);
-				// console.log(`[EmbeddedNoteTitles] Block parent:`, embedBlock.parentElement);
+				// console.log(`[EmbeddedNoteEnhancer] Comprehensive processing of embed:`, embedBlock);
+				// console.log(`[EmbeddedNoteEnhancer] Block classes:`, embedBlock.className);
+				// console.log(`[EmbeddedNoteEnhancer] Block parent:`, embedBlock.parentElement);
 				
 				// 尝试处理这个嵌入块
 				try {
 					this.processEmbeddedBlock(embedBlock as HTMLElement);
 					// processedCount++;
 				} catch (error) {
-					console.error(`[EmbeddedNoteTitles] Error processing embed:`, error);
+					console.error(`[EmbeddedNoteEnhancer] Error processing embed:`, error);
 				}
 			}
 			// 无论是否新处理，都统一一次样式
 			this.applyUnifiedBlockStyles(embedBlock as HTMLElement);
 		});
 		
-		// console.log(`[EmbeddedNoteTitles] Comprehensive method processed ${processedCount} new embeds`);
+		// console.log(`[EmbeddedNoteEnhancer] Comprehensive method processed ${processedCount} new embeds`);
 		// 处理完成后刷新嵌套层级
 		this.refreshAllNestLevels();
 		
@@ -1103,13 +1103,13 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 
 		// 检查是否为图片嵌入，如果是则跳过处理，使用Obsidian原版方式
 		if (this.isImageEmbed(block)) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping image embed, using native Obsidian behavior:`, block);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping image embed, using native Obsidian behavior:`, block);
 			return;
 		}
 
 		// 处理div元素和包含嵌入内容的span元素
 		if (block.tagName.toLowerCase() !== 'div' && block.tagName.toLowerCase() !== 'span') {
-		if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping non-div/span element:`, block.tagName, block);
+		if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping non-div/span element:`, block.tagName, block);
 			return;
 		}
 		
@@ -1120,12 +1120,12 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 									block.classList.contains('internal-embed') ||
 									block.classList.contains('markdown-embed');
 			if (!hasEmbedContent) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping span without embed content:`, block);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping span without embed content:`, block);
 				return;
 			}
 		}
 
-		this.logOnce('process-block-' + block.tagName + '-' + block.className, `[EmbeddedNoteTitles] Processing block: ${block.tagName} ${block.className}`);
+		this.logOnce('process-block-' + block.tagName + '-' + block.className, `[EmbeddedNoteEnhancer] Processing block: ${block.tagName} ${block.className}`);
 
 		// 获取来源信息：优先从链接获取，其次从属性中推断
 		let href: string | null = null;
@@ -1140,20 +1140,20 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			href = block.getAttribute('src') || block.getAttribute('href') || block.getAttribute('data-src');
 		}
 		if (!href) {
-			// console.log(`[EmbeddedNoteTitles] No href/src found in block`);
+			// console.log(`[EmbeddedNoteEnhancer] No href/src found in block`);
 			return;
 		}
 
-		// console.log(`[EmbeddedNoteTitles] Found href: ${href}`);
+		// console.log(`[EmbeddedNoteEnhancer] Found href: ${href}`);
 
         // 提取文件名/链接文本
 		const fileName = this.extractFileName(href);
         if (!fileName) {
-			// console.log(`[EmbeddedNoteTitles] Failed to extract fileName from href: ${href}`);
+			// console.log(`[EmbeddedNoteEnhancer] Failed to extract fileName from href: ${href}`);
 			return;
 		}
 
-		// console.log(`[EmbeddedNoteTitles] Extracted fileName: ${fileName}`);
+		// console.log(`[EmbeddedNoteEnhancer] Extracted fileName: ${fileName}`);
 
         // 确认文件是否存在；不存在则保持默认 UI 不做增强
         // 使用多种方法检查文件是否存在，确保健壮性
@@ -1177,10 +1177,10 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
             }
         }
         
-		this.logOnce('file-exists-' + fileName + '-' + fileExists, `[EmbeddedNoteTitles] File exists check for ${fileName}: ${fileExists}`);
+		this.logOnce('file-exists-' + fileName + '-' + fileExists, `[EmbeddedNoteEnhancer] File exists check for ${fileName}: ${fileExists}`);
         
         if (!fileExists) {
-            console.log(`[EmbeddedNoteTitles] File does not exist, removing enhancement for ${fileName}`);
+            console.log(`[EmbeddedNoteEnhancer] File does not exist, removing enhancement for ${fileName}`);
             this.removeEnhancement(block);
             return;
         }
@@ -1194,7 +1194,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		// 检查是否已经有标题栏，避免重复插入
 		const existingTitleBar = block.querySelector('.embedded-note-title-bar');
 		if (existingTitleBar) {
-			this.logOnce('title-exists-' + blockId, `[EmbeddedNoteTitles] Title bar already exists for block ${blockId}, skipping insertion`);
+			this.logOnce('title-exists-' + blockId, `[EmbeddedNoteEnhancer] Title bar already exists for block ${blockId}, skipping insertion`);
 			return;
 		}
 		
@@ -1237,8 +1237,8 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			}
 		}
 		
-		// console.log(`[EmbeddedNoteTitles] Content area found for block ${blockId}:`, embedContent);
-		// console.log(`[EmbeddedNoteTitles] Content area text content:`, embedContent.textContent?.substring(0, 100));
+		// console.log(`[EmbeddedNoteEnhancer] Content area found for block ${blockId}:`, embedContent);
+		// console.log(`[EmbeddedNoteEnhancer] Content area text content:`, embedContent.textContent?.substring(0, 100));
 		
 		// 插入标题栏（兼容 span.internal-embed 初始为 inline 的情况）
 		if (block.tagName.toLowerCase() === 'span') {
@@ -1310,7 +1310,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		
 		// 调试：检查标题栏是否真的被创建
 		const createdTitleBar = block.querySelector('.embedded-note-title-bar');
-		if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Title bar created for block ${blockId}:`, !!createdTitleBar, createdTitleBar);
+		if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Title bar created for block ${blockId}:`, !!createdTitleBar, createdTitleBar);
 	}
 
 	/**
@@ -1337,7 +1337,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		titleBar.className = 'embedded-note-title-bar';
 		titleBar.setAttribute('data-block-id', blockId);
 		
-		if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Creating title bar for ${fileName} with class: ${titleBar.className}`);
+		if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Creating title bar for ${fileName} with class: ${titleBar.className}`);
 		
 		// 设置样式 - 使用Obsidian主题变量，字体颜色使用主题强调色
 		titleBar.style.cssText = `
@@ -1440,7 +1440,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			if (!embedContent) return;
 			const editing = block.getAttribute('data-editing') === 'true';
 			if (editing) {
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Disabling inline editing for block ${blockId}`);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Disabling inline editing for block ${blockId}`);
 				// 若启用手动保存，关闭编辑前强制保存一次
 				if (this.settings.manualSaveOnly) {
 					const editor = embedContent.querySelector('textarea.embedded-note-editor') as HTMLTextAreaElement | null;
@@ -1467,7 +1467,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 					}
 				}
 			} else {
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Enabling inline editing for block ${blockId}`);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Enabling inline editing for block ${blockId}`);
 				this.enableInlineEditing(block);
 				block.setAttribute('data-editing', 'true');
 				editBtn.textContent = '完成';
@@ -1506,25 +1506,25 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 					// 在新标签页中打开文件
 					const leaf = this.app.workspace.getLeaf('tab');
 					leaf.openFile(file);
-					if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Jumped to file in new tab: ${file.path}`);
+					if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Jumped to file in new tab: ${file.path}`);
 				} else {
 					// 在当前视图中打开文件
 					const activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView)?.leaf;
 					if (activeLeaf) {
 						activeLeaf.openFile(file);
-						if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Jumped to file in current view: ${file.path}`);
+						if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Jumped to file in current view: ${file.path}`);
 					} else {
 						// 如果没有活动的Markdown视图，则在新标签页中打开
 						const leaf = this.app.workspace.getLeaf('tab');
 						leaf.openFile(file);
-						if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] No active Markdown view, opened in new tab: ${file.path}`);
+						if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] No active Markdown view, opened in new tab: ${file.path}`);
 					}
 				}
 			} else {
-				console.warn(`[EmbeddedNoteTitles] File not found: ${fileName}`);
+				console.warn(`[EmbeddedNoteEnhancer] File not found: ${fileName}`);
 			}
 		} catch (error) {
-			console.error(`[EmbeddedNoteTitles] Error jumping to file ${fileName}:`, error);
+			console.error(`[EmbeddedNoteEnhancer] Error jumping to file ${fileName}:`, error);
 		}
 	}
 
@@ -1603,8 +1603,8 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			const file = this.resolveLinkedFile(block);
 			if (file) {
 				this.editingFiles.delete(file.path);
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Removed file from editing set: ${file.path}`);
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Current editing files: ${Array.from(this.editingFiles)}`);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Removed file from editing set: ${file.path}`);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Current editing files: ${Array.from(this.editingFiles)}`);
 			}
 		}
 
@@ -1656,7 +1656,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
         const blockEl = embedContent.closest('.markdown-embed, .internal-embed') as HTMLElement | null;
         if (blockEl) {
             blockEl.removeAttribute('data-freeze');
-		if (this.debugVerbose) console.debug('[EmbeddedNoteTitles] unfreeze on', blockEl.getAttribute('data-block-id'));
+		if (this.debugVerbose) console.debug('[EmbeddedNoteEnhancer] unfreeze on', blockEl.getAttribute('data-block-id'));
         }
         // 不再主动渲染；交给 Obsidian 的内置机制在保存后刷新内容
 	}
@@ -1670,12 +1670,12 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		
 		// 如果文件正在编辑中，跳过处理以避免重新渲染导致新窗口打开
 		if (this.editingFiles.has(file.path)) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping file modify for editing file: ${file.basename}`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping file modify for editing file: ${file.basename}`);
 			return;
 		}
 		// 若任意嵌入编辑器存在，跳过
 		if (document.querySelector('textarea.embedded-note-editor')) {
-			this.logOnce('skip-modify-during-edit', '[EmbeddedNoteTitles] Skip file modify: editor active');
+			this.logOnce('skip-modify-during-edit', '[EmbeddedNoteEnhancer] Skip file modify: editor active');
 			return;
 		}
 		
@@ -1700,17 +1700,17 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		
 		// 如果文件正在编辑中，跳过处理以避免重新渲染导致新窗口打开
 		if (this.editingFiles.has(file.path)) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping file save for editing file: ${file.basename}`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping file save for editing file: ${file.basename}`);
 			return;
 		}
 		// 若任意嵌入编辑器存在，跳过
 		if (document.querySelector('textarea.embedded-note-editor')) {
-			this.logOnce('skip-save-during-edit', '[EmbeddedNoteTitles] Skip file save: editor active');
+			this.logOnce('skip-save-during-edit', '[EmbeddedNoteEnhancer] Skip file save: editor active');
 			return;
 		}
 
 		// const fileName = file.basename;
-		// console.log(`[EmbeddedNoteTitles] File saved: ${fileName}`);
+		// console.log(`[EmbeddedNoteEnhancer] File saved: ${fileName}`);
 		
 		// 文件保存后，延迟处理以确保DOM完全更新
 		setTimeout(() => {
@@ -1729,13 +1729,13 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	private handleFileModifyDelayed(file: TFile) {
 		// 如果文件正在编辑中，跳过处理以避免重新渲染导致新窗口打开
 		if (this.editingFiles.has(file.path)) {
-			console.log(`[EmbeddedNoteTitles] Skipping delayed file modify for editing file: ${file.basename}`);
+			console.log(`[EmbeddedNoteEnhancer] Skipping delayed file modify for editing file: ${file.basename}`);
 			return;
 		}
 
 		const fileName = file.basename;
 		const filePath = file.path;
-		// console.log(`[EmbeddedNoteTitles] Processing delayed file modification for: ${fileName} (${filePath})`);
+		// console.log(`[EmbeddedNoteEnhancer] Processing delayed file modification for: ${fileName} (${filePath})`);
 		
 		this.embeddedBlocks.forEach((block) => {
 			// 获取嵌入块引用的文件路径
@@ -1746,21 +1746,21 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			const blockReferencedFile = this.resolveLinkedFile(block);
 			if (!blockReferencedFile) {
 				// 如果无法解析引用的文件，说明文件可能已被删除
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Cannot resolve file for block with link: ${blockFileLink}, removing enhancement`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Cannot resolve file for block with link: ${blockFileLink}, removing enhancement`);
 				this.removeEnhancement(block);
 				return;
 			}
 			
 			// 只有当前嵌入块引用的文件就是被修改的文件时，才重新处理
 			if (blockReferencedFile.path === filePath) {
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Found block referencing modified file ${fileName}`);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Found block referencing modified file ${fileName}`);
 				// 重新评估：若文件已不存在，撤销增强；否则维持现状
 				const exists = this.checkEmbedFileExists(block);
 				if (!exists) {
-					if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] File ${fileName} no longer exists, removing enhancement`);
+					if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] File ${fileName} no longer exists, removing enhancement`);
 					this.removeEnhancement(block);
 				} else {
-					if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] File ${fileName} still exists, maintaining current state`);
+					if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] File ${fileName} still exists, maintaining current state`);
 					// 文件存在时不需要重新处理，保持当前状态即可
 				}
 			}
@@ -1777,7 +1777,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	private reprocessAllNestedEmbeds() {
 		// 检查是否有文件正在编辑中，如果有则跳过重新处理
 		if (this.editingFiles.size > 0 || document.querySelector('[data-freeze="true"]') || document.querySelector('textarea.embedded-note-editor')) {
-		if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping reprocessAllNestedEmbeds due to editing files: ${Array.from(this.editingFiles)}`);
+		if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping reprocessAllNestedEmbeds due to editing files: ${Array.from(this.editingFiles)}`);
 			return;
 		}
 		
@@ -1792,7 +1792,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			return;
 		}
 
-		this.logOnce('reprocess-nested', `[EmbeddedNoteTitles] Reprocessing all nested embeds after file modification`);
+		this.logOnce('reprocess-nested', `[EmbeddedNoteEnhancer] Reprocessing all nested embeds after file modification`);
 		
 		const container = activeView.contentEl;
 		if (!container) return;
@@ -1807,24 +1807,24 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 			// 检查是否为图片嵌入，如果是则跳过处理
 			if (this.isImageEmbed(embedBlock as HTMLElement)) {
 				imageEmbedCount++;
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping reprocess of image embed:`, embedBlock);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping reprocess of image embed:`, embedBlock);
 				return;
 			}
 			
 			// 检查是否已经处理过
 			if (!embedBlock.hasAttribute('data-title-bar-added')) {
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Reprocessing unprocessed embed:`, embedBlock);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Reprocessing unprocessed embed:`, embedBlock);
 				this.processEmbeddedBlock(embedBlock as HTMLElement);
 				reprocessedCount++;
 			} else {
-				if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Embed already processed, skipping:`, embedBlock);
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Embed already processed, skipping:`, embedBlock);
 			}
 		});
 		
 		// 缓存文件的嵌入结构信息
 		this.cacheFileEmbedStructure(file.path, allEmbeds.length, imageEmbedCount > 0);
 		
-		if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Reprocessed ${reprocessedCount} nested embeds, found ${imageEmbedCount} image embeds`);
+		if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Reprocessed ${reprocessedCount} nested embeds, found ${imageEmbedCount} image embeds`);
 		
 		// 如果发现了新的嵌入块，再次递归处理
 		if (reprocessedCount > 0) {
@@ -1855,8 +1855,8 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		const file = this.resolveLinkedFile(block);
 		if (file) {
 			this.editingFiles.add(file.path);
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Added file to editing set: ${file.path}`);
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Current editing files: ${Array.from(this.editingFiles)}`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Added file to editing set: ${file.path}`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Current editing files: ${Array.from(this.editingFiles)}`);
 		}
 
 		// 使用 textarea 进行编辑，避免把提示或其他 DOM 写入文件
@@ -1899,7 +1899,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 
         // 冻结该块，避免在编辑期间被任何流程重新处理
         block.setAttribute('data-freeze', 'true');
-		if (this.debugVerbose) console.debug('[EmbeddedNoteTitles] freeze on', block.getAttribute('data-block-id'));
+		if (this.debugVerbose) console.debug('[EmbeddedNoteEnhancer] freeze on', block.getAttribute('data-block-id'));
 
 		// 冻结该块，避免在编辑期间被任何流程重新处理
 		block.setAttribute('data-freeze', 'true');
@@ -2027,7 +2027,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 				if (!hasOnlyImage) {
 					// 如果文本内容较多，说明是包含图片的文本嵌入，不应该被排除
 					isImage = false;
-					if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Text embed with image detected, not excluding:`, block);
+					if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Text embed with image detected, not excluding:`, block);
 				}
 			}
 		}
@@ -2054,7 +2054,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		const lastTime = this.processingThrottle.get(key) || 0;
 		
 		if (now - lastTime < delay) {
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Throttling ${key}, last processed ${now - lastTime}ms ago`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Throttling ${key}, last processed ${now - lastTime}ms ago`);
 			return;
 		}
 		
@@ -2081,7 +2081,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		}
 		
 		// 如果有缓存且时间未过期，不需要重新处理
-		if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Skipping nested processing for ${filePath} (cached ${Math.round((now - cached.timestamp) / 1000)}s ago)`);
+		if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping nested processing for ${filePath} (cached ${Math.round((now - cached.timestamp) / 1000)}s ago)`);
 		return false;
 	}
 
@@ -2102,7 +2102,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	private clearFileCache(filePath: string) {
 		this.fileEmbedStructure.delete(filePath);
 		this.processedFiles.delete(filePath);
-		if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Cleared cache for file: ${filePath}`);
+		if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Cleared cache for file: ${filePath}`);
 	}
 
 	/**
@@ -2143,9 +2143,9 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 				}
 			});
 
-			if (this.debugVerbose) console.log(`[EmbeddedNoteTitles] Preloaded ${fileLinks.size} file types`);
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Preloaded ${fileLinks.size} file types`);
 		} catch (error) {
-			if (this.debugVerbose) console.warn('[EmbeddedNoteTitles] Error preloading file type cache:', error);
+			if (this.debugVerbose) console.warn('[EmbeddedNoteEnhancer] Error preloading file type cache:', error);
 		}
 	}
 
@@ -2244,7 +2244,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 		try {
 			const file = this.resolveLinkedFile(block);
 			if (!file) {
-				console.warn('[EmbeddedNoteTitles] Cannot resolve file for block');
+				console.warn('[EmbeddedNoteEnhancer] Cannot resolve file for block');
 				return;
 			}
 
@@ -2389,7 +2389,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	 * 手动触发处理（调试用）
 	 */
 	public manualTrigger() {
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] Manual trigger called');
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] Manual trigger called');
 		this.processEmbeddedBlocks();
 		setTimeout(() => {
 			this.reprocessAllNestedEmbeds();
@@ -2400,7 +2400,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	 * 移除样式
 	 */
 	public removeStyles() {
-		const styleEl = document.getElementById('embedded-note-titles-styles');
+							const styleEl = document.getElementById('embedded-note-enhancer-styles');
 		if (styleEl) {
 			styleEl.remove();
 		}
@@ -2483,7 +2483,7 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 	 * 移除所有标题栏
 	 */
 	public removeAllTitleBars() {
-		if (this.debugVerbose) console.log('[EmbeddedNoteTitles] removeAllTitleBars called');
+		if (this.debugVerbose) console.log('[EmbeddedNoteEnhancer] removeAllTitleBars called');
 		
 		// 处理所有带有增强标记的块
 		const enhancedBlocks = document.querySelectorAll('.markdown-embed[data-embedded-note-enhanced], .internal-embed[data-embedded-note-enhanced]');
@@ -2606,10 +2606,10 @@ export default class EmbeddedNoteTitlesPlugin extends Plugin {
 /**
  * 设置标签页
  */
-class EmbeddedNoteTitlesSettingTab extends PluginSettingTab {
-	plugin: EmbeddedNoteTitlesPlugin;
+class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
+	plugin: EmbeddedNoteEnhancerPlugin;
 
-	constructor(app: App, plugin: EmbeddedNoteTitlesPlugin) {
+	constructor(app: App, plugin: EmbeddedNoteEnhancerPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -2618,7 +2618,7 @@ class EmbeddedNoteTitlesSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h1', { text: 'Embedded Note Titles 设置' });
+		containerEl.createEl('h1', { text: 'Embedded Note Enhancer 设置' });
 
 
 

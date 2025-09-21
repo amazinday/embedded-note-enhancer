@@ -1,4 +1,4 @@
-# Embedded Note Titles
+# Embedded Note Enhancer
 
 > 为 Obsidian 中的嵌入笔记添加可交互的标题栏，支持折叠/展开、原地编辑和快速跳转功能
 
@@ -23,21 +23,21 @@
 1. 打开 Obsidian 设置 → 第三方插件
 2. 关闭安全模式（如果已关闭则跳过）
 3. 点击"浏览"按钮
-4. 搜索 "Embedded Note Titles"
+4. 搜索 "Embedded Note Enhancer"
 5. 点击安装并启用
 
 #### 方式二：手动安装
 1. 下载 [最新版本](https://github.com/amazinday/embedded-note-enhancer/releases/latest)
-2. 解压下载的 `embedded-note-titles-v1.0.0.zip` 文件
-3. 将 `main.js`、`manifest.json` 和 `styles.css` 复制到你的 vault 的 `.obsidian/plugins/embedded-note-titles/` 文件夹中
+2. 解压下载的 `embedded-note-enhancer-v0.1.0.zip` 文件
+3. 将 `main.js`、`manifest.json` 和 `styles.css` 复制到你的 vault 的 `.obsidian/plugins/embedded-note-enhancer/` 文件夹中
 4. 重新加载 Obsidian
-5. 在设置 → 第三方插件中启用 "Embedded Note Titles"
+5. 在设置 → 第三方插件中启用 "Embedded Note Enhancer"
 
 ### 📦 下载链接
 
 | 版本 | 发布日期 | 下载链接 | 说明 |
 |------|----------|----------|------|
-| v0.1.0 | 2024-09-21 | [📥 下载](https://github.com/amazinday/embedded-note-enhancer/releases/download/v0.1.0/embedded-note-titles-v1.0.0.zip) | 首次发布版本 |
+| v0.1.0 | 2024-09-21 | [📥 下载](https://github.com/amazinday/embedded-note-enhancer/releases/download/v0.1.0/embedded-note-enhancer-v0.1.0.zip) | 首次发布版本 |
 
 > 💡 **提示**: 如果没有看到社区插件市场选项，可以直接下载最新版本进行手动安装。
 
@@ -72,7 +72,7 @@
 
 ## ⚙️ 配置选项
 
-在 Obsidian 设置 → 第三方插件 → Embedded Note Titles 中可以配置以下选项：
+在 Obsidian 设置 → 第三方插件 → Embedded Note Enhancer 中可以配置以下选项：
 
 | 设置项 | 描述 | 默认值 |
 |--------|------|--------|
@@ -144,7 +144,7 @@ A: 请尝试切换主题或重新加载 Obsidian。如果使用自定义 CSS，�
 
 ```javascript
 // 手动触发插件处理
-window.embeddedNoteTitlesPlugin?.manualTrigger();
+window.embeddedNoteEnhancerPlugin?.manualTrigger();
 ```
 
 ## 🛠️ 开发指南
@@ -237,6 +237,6 @@ embedded-note-enhancer/
 
 **Made with ❤️ for the Obsidian community**
 
-[⬆ 回到顶部](#embedded-note-titles)
+[⬆ 回到顶部](#embedded-note-enhancer)
 
 </div>
