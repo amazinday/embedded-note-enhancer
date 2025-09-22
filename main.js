@@ -235,7 +235,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         if (file instanceof import_obsidian.TFile) {
           this.filesBeingCreated.delete(file.path);
           this.filesBeingCreated.delete(file.basename);
-          console.log(`[EmbeddedNoteEnhancer] File created: ${file.path}`);
           setTimeout(() => {
             this.processEmbeddedBlocks();
           }, 1e3);
@@ -795,7 +794,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (embeddedBlocks.length === 0) {
       embeddedBlocks = container.querySelectorAll('[data-type="markdown-embed"]');
     }
-    this.logOnce("found-embeds", `Found ${embeddedBlocks.length} embedded blocks`);
     const blocksArray = Array.from(embeddedBlocks);
     blocksArray.sort((a, b) => {
       const aLevel = this.calculateNestLevel(a);
@@ -843,7 +841,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     }
     this.processingContainers.add(container);
     const allEmbeds = container.querySelectorAll('.markdown-embed, .internal-embed, [data-type="markdown-embed"]');
-    this.logOnce("nested-total", `Found ${allEmbeds.length} total embeds in nested processing`);
     let hasNewEmbeds = false;
     let processedCount = 0;
     let imageEmbedCount = 0;
@@ -864,7 +861,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       this.cacheFileEmbedStructure(activeView.file.path, allEmbeds.length, imageEmbedCount > 0);
     }
     if (hasNewEmbeds && processedCount > 0) {
-      this.logOnce("nested-processing-again", "Found new nested embeds, processing again...");
       setTimeout(() => {
         this.processNestedEmbeds(container, depth + 1);
       }, 50);
@@ -879,7 +875,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 处理所有可能的嵌套嵌入（更全面的方法）
    */
   processAllNestedEmbeds(container) {
-    this.logOnce("all-nested-start", "Processing all nested embeds with comprehensive method");
     const allPossibleEmbeds = container.querySelectorAll(`
 			.markdown-embed,
 			.internal-embed,
@@ -889,7 +884,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
 			.internal-embed-content .markdown-embed,
 			.internal-embed-content .internal-embed
 		`);
-    this.logOnce("all-nested-count", `Found ${allPossibleEmbeds.length} possible embeds with comprehensive method`);
     allPossibleEmbeds.forEach((embedBlock) => {
       if (!embedBlock.hasAttribute("data-title-bar-added")) {
         if (this.isImageEmbed(embedBlock)) {
@@ -985,7 +979,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         return;
       }
     }
-    this.logOnce("process-block", `Processing ${block.tagName} block`);
     let href = null;
     let embedLink = block.querySelector(".markdown-embed-link");
     if (!embedLink)
@@ -1180,7 +1173,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const titleBar = document.createElement("div");
     titleBar.className = "embedded-note-title-bar";
     titleBar.setAttribute("data-block-id", blockId);
-    this.log(`Creating title bar for ${fileName}`);
     titleBar.style.cssText = `
 			background-color: var(--background-secondary);
 			color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
@@ -1253,7 +1245,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const onTitleClick = (e) => {
       if (e.target.closest(".embedded-note-edit-btn") || e.target.closest(".embedded-note-jump-btn"))
         return;
-      const block = this.embeddedBlocks.get(blockId);
+      const block = document.querySelector(`[data-block-id="${blockId}"]`);
       if (block && block.getAttribute("data-editing") === "true")
         return;
       this.toggleBlockCollapse(blockId);
@@ -1261,7 +1253,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     this.addTrackedEventListener(titleBar, "click", onTitleClick);
     const onEditClick = (e) => {
       e.stopPropagation();
-      const block = this.embeddedBlocks.get(blockId);
+      const block = document.querySelector(`[data-block-id="${blockId}"]`);
       if (!block)
         return;
       const embedContent = block.querySelector(".markdown-embed-content");
@@ -1364,9 +1356,14 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 切换块的折叠状态
    */
   toggleBlockCollapse(blockId) {
-    const block = this.embeddedBlocks.get(blockId);
-    if (!block)
+    const block = document.querySelector(`[data-block-id="${blockId}"]`);
+    if (!block) {
+      this.log(`Block not found for blockId: ${blockId}`);
       return;
+    }
+    const fileName = block.getAttribute("data-file-link") || "unknown";
+    const nestLevel = block.getAttribute("data-nest-level") || "unknown";
+    this.log(`Toggling collapse for blockId: ${blockId}, fileName: ${fileName}, nestLevel: ${nestLevel}`);
     const isCurrentlyCollapsed = this.collapseStates.get(blockId) || false;
     const newState = !isCurrentlyCollapsed;
     this.collapseStates.set(blockId, newState);
@@ -2004,6 +2001,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 生成块ID
    */
   generateBlockId(block, fileName) {
+    var _a;
     const activeFile = this.app.workspace.getActiveFile();
     const activeFilePath = (activeFile == null ? void 0 : activeFile.path) || "unknown";
     const nestLevel = this.calculateNestLevel(block);
@@ -2017,11 +2015,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       }
       parent = parent.parentElement;
     }
-    const baseId = `embedded-${activeFilePath.replace(/[^a-zA-Z0-9]/g, "_")}-${fileName.replace(/[^a-zA-Z0-9]/g, "_")}-level${nestLevel}${parentContext}`;
-    if (baseId.length > 100) {
-      const hash = this.simpleHash(baseId);
-      return `embedded-${fileName.replace(/[^a-zA-Z0-9]/g, "_")}-level${nestLevel}-${hash}`;
-    }
+    const pathHash = this.simpleHash(activeFilePath);
+    const nameHash = this.simpleHash(fileName);
+    const blockIndex = Array.from(((_a = block.parentElement) == null ? void 0 : _a.children) || []).indexOf(block);
+    const baseId = `embedded-${pathHash}-${nameHash}-level${nestLevel}${parentContext}-pos${blockIndex}`;
     return baseId;
   }
   /**

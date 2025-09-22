@@ -260,7 +260,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 					// 文件创建完成，从创建列表中移除
 					this.filesBeingCreated.delete(file.path);
 					this.filesBeingCreated.delete(file.basename);
-					console.log(`[EmbeddedNoteEnhancer] File created: ${file.path}`);
 					// 延迟处理，确保文件完全创建，但增加延迟时间避免与MutationObserver冲突
 					setTimeout(() => {
 						this.processEmbeddedBlocks();
@@ -914,8 +913,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			embeddedBlocks = container.querySelectorAll('[data-type="markdown-embed"]');
 		}
 		
-		this.logOnce('found-embeds', `Found ${embeddedBlocks.length} embedded blocks`);
-		
 		// 按层级顺序处理，确保父级嵌入块先被处理
 		const blocksArray = Array.from(embeddedBlocks) as HTMLElement[];
 		blocksArray.sort((a, b) => {
@@ -986,8 +983,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		// 查找所有嵌入块，包括嵌套的
 		const allEmbeds = container.querySelectorAll('.markdown-embed, .internal-embed, [data-type="markdown-embed"]');
 		
-		this.logOnce('nested-total', `Found ${allEmbeds.length} total embeds in nested processing`);
-		
 		let hasNewEmbeds = false;
 		let processedCount = 0;
 		let imageEmbedCount = 0;
@@ -1016,7 +1011,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		
 		// 如果发现了新的嵌入块，再次递归处理（处理多层嵌套）
 		if (hasNewEmbeds && processedCount > 0) {
-			this.logOnce('nested-processing-again', 'Found new nested embeds, processing again...');
 			setTimeout(() => {
 				this.processNestedEmbeds(container, depth + 1);
 			}, 50);
@@ -1038,8 +1032,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	 * 处理所有可能的嵌套嵌入（更全面的方法）
 	 */
 	private processAllNestedEmbeds(container: HTMLElement) {
-		this.logOnce('all-nested-start', 'Processing all nested embeds with comprehensive method');
-		
 		// 查找所有可能的嵌入块，使用更广泛的选择器
 		const allPossibleEmbeds = container.querySelectorAll(`
 			.markdown-embed,
@@ -1050,8 +1042,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			.internal-embed-content .markdown-embed,
 			.internal-embed-content .internal-embed
 		`);
-		
-		this.logOnce('all-nested-count', `Found ${allPossibleEmbeds.length} possible embeds with comprehensive method`);
 		
 		// let processedCount = 0;
 		
@@ -1173,8 +1163,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				return;
 			}
 		}
-
-		this.logOnce('process-block', `Processing ${block.tagName} block`);
 
 		// 获取来源信息：优先从链接获取，其次从属性中推断
 		let href: string | null = null;
@@ -1457,8 +1445,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		titleBar.className = 'embedded-note-title-bar';
 		titleBar.setAttribute('data-block-id', blockId);
 		
-			this.log(`Creating title bar for ${fileName}`);
-		
 		// 设置样式 - 使用Obsidian主题变量，字体颜色使用主题强调色
 		titleBar.style.cssText = `
 			background-color: var(--background-secondary);
@@ -1545,7 +1531,8 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			if ((e.target as HTMLElement).closest('.embedded-note-edit-btn') || 
 				(e.target as HTMLElement).closest('.embedded-note-jump-btn')) return;
 			// 编辑状态下禁止折叠/展开
-			const block = this.embeddedBlocks.get(blockId);
+			// 直接从DOM中查找块，不依赖于 embeddedBlocks 映射
+			const block = document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement;
 			if (block && block.getAttribute('data-editing') === 'true') return;
 			this.toggleBlockCollapse(blockId);
 		};
@@ -1554,7 +1541,8 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		// 编辑按钮切换原地编辑
 		const onEditClick = (e: MouseEvent) => {
 			e.stopPropagation();
-			const block = this.embeddedBlocks.get(blockId);
+			// 直接从DOM中查找块，不依赖于 embeddedBlocks 映射
+			const block = document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement;
 			if (!block) return;
 			const embedContent = block.querySelector('.markdown-embed-content') as HTMLElement | null;
 			if (!embedContent) return;
@@ -1668,8 +1656,17 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	 * 切换块的折叠状态
 	 */
 	private toggleBlockCollapse(blockId: string) {
-		const block = this.embeddedBlocks.get(blockId);
-		if (!block) return;
+		// 不依赖于 embeddedBlocks 映射，直接从DOM中查找
+		const block = document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement;
+		if (!block) {
+			this.log(`Block not found for blockId: ${blockId}`);
+			return;
+		}
+		
+		// 调试信息：显示找到的块的信息
+		const fileName = block.getAttribute('data-file-link') || 'unknown';
+		const nestLevel = block.getAttribute('data-nest-level') || 'unknown';
+		this.log(`Toggling collapse for blockId: ${blockId}, fileName: ${fileName}, nestLevel: ${nestLevel}`);
 
 		const isCurrentlyCollapsed = this.collapseStates.get(blockId) || false;
 		const newState = !isCurrentlyCollapsed;
@@ -2499,14 +2496,17 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			parent = parent.parentElement;
 		}
 		
-		// 使用文件路径、文件名、嵌套层级和父级上下文生成唯一ID
-		const baseId = `embedded-${activeFilePath.replace(/[^a-zA-Z0-9]/g, '_')}-${fileName.replace(/[^a-zA-Z0-9]/g, '_')}-level${nestLevel}${parentContext}`;
+		// 使用更安全的方法生成唯一ID
+		// 1. 使用文件路径的哈希值
+		const pathHash = this.simpleHash(activeFilePath);
+		// 2. 使用文件名的哈希值
+		const nameHash = this.simpleHash(fileName);
+		// 3. 使用嵌套层级
+		// 4. 使用父级上下文
+		// 5. 使用块在DOM中的位置（作为最后的保险）
+		const blockIndex = Array.from(block.parentElement?.children || []).indexOf(block);
 		
-		// 如果ID太长，截取并添加哈希
-		if (baseId.length > 100) {
-			const hash = this.simpleHash(baseId);
-			return `embedded-${fileName.replace(/[^a-zA-Z0-9]/g, '_')}-level${nestLevel}-${hash}`;
-		}
+		const baseId = `embedded-${pathHash}-${nameHash}-level${nestLevel}${parentContext}-pos${blockIndex}`;
 		
 		return baseId;
 	}
