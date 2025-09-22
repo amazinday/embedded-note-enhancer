@@ -38,7 +38,8 @@ var DEFAULT_SETTINGS = {
   autoSaveDelay: 1e3,
   manualSaveOnly: false,
   livePreviewEnabled: false,
-  collapseStates: {}
+  collapseStates: {},
+  debugMode: false
 };
 var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   constructor() {
@@ -66,6 +67,23 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     this.processedFiles = /* @__PURE__ */ new Set();
     // 缓存文件的嵌入结构，避免重复计算
     this.fileEmbedStructure = /* @__PURE__ */ new Map();
+    // 追踪正在创建的文件，避免过早处理导致卡死
+    this.filesBeingCreated = /* @__PURE__ */ new Set();
+    // 防抖定时器，避免在用户输入过程中频繁处理
+    this.debounceTimer = null;
+  }
+  // 简化日志方法
+  log(message, ...args) {
+    var _a;
+    if (((_a = this.settings) == null ? void 0 : _a.debugMode) || this.debugVerbose) {
+      console.log(`[EmbeddedNoteEnhancer] ${message}`, ...args);
+    }
+  }
+  warn(message, ...args) {
+    console.warn(`[EmbeddedNoteEnhancer] ${message}`, ...args);
+  }
+  error(message, ...args) {
+    console.error(`[EmbeddedNoteEnhancer] ${message}`, ...args);
   }
   /** 为元素添加监听器并记录，便于后续移除 */
   addTrackedEventListener(el, type, handler, options) {
@@ -113,10 +131,9 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   logOnce(key, message, ...args) {
     const now = Date.now();
     const last = this.lastLogTimes.get(key) || 0;
-    const ttl = 500;
+    const ttl = 2e3;
     if (now - last > ttl) {
-      if (this.debugVerbose)
-        console.log(message, ...args);
+      this.log(message, ...args);
       this.lastLogTimes.set(key, now);
     }
   }
@@ -136,8 +153,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     return block.querySelector(".markdown-embed-content, .internal-embed-content");
   }
   async onload() {
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Plugin loading...");
+    this.log("Plugin loading...");
     await this.loadSettings();
     this.restoreCollapseStates();
     this.addSettingTab(new EmbeddedNoteEnhancerSettingTab(this.app, this));
@@ -150,8 +166,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     Object.entries(this.settings.collapseStates).forEach(([blockId, isCollapsed]) => {
       this.collapseStates.set(blockId, isCollapsed);
     });
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Restored collapse states:", this.settings.collapseStates);
+    this.log("Restored collapse states:", this.settings.collapseStates);
   }
   /**
    * 保存当前的折叠状态到设置中
@@ -159,8 +174,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   saveCurrentCollapseStates() {
     this.settings.collapseStates = Object.fromEntries(this.collapseStates);
     this.saveSettings();
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Saved collapse states:", this.settings.collapseStates);
+    this.log("Saved collapse states:", this.settings.collapseStates);
   }
   /**
    * 应用保存的折叠状态到所有嵌入块（包括嵌套的）
@@ -173,8 +187,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         const isCollapsed = this.collapseStates.get(blockId);
         if (isCollapsed !== void 0) {
           this.setBlockCollapsed(block, isCollapsed);
-          if (this.debugVerbose)
-            console.log(`[EmbeddedNoteEnhancer] Applied saved collapse state for ${blockId}: ${isCollapsed}`);
+          this.log(`Applied saved collapse state for ${blockId}: ${isCollapsed}`);
         }
       }
     });
@@ -218,6 +231,18 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       })
     );
     this.registerEvent(
+      this.app.vault.on("create", (file) => {
+        if (file instanceof import_obsidian.TFile) {
+          this.filesBeingCreated.delete(file.path);
+          this.filesBeingCreated.delete(file.basename);
+          console.log(`[EmbeddedNoteEnhancer] File created: ${file.path}`);
+          setTimeout(() => {
+            this.processEmbeddedBlocks();
+          }, 1e3);
+        }
+      })
+    );
+    this.registerEvent(
       this.app.vault.on("rename", (file) => {
         if (file instanceof import_obsidian.TFile) {
           this.handleFileSave(file);
@@ -240,8 +265,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         }, 100);
       })
     );
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Starting initial processing...");
+    this.log("Starting initial processing...");
     this.processEmbeddedBlocks();
     this.startBootstrapSweep();
     (_d = (_c = this.app.workspace).onLayoutReady) == null ? void 0 : _d.call(_c, () => {
@@ -256,8 +280,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       this.processEmbeddedBlocks();
     }, 1500);
     this.setupPeriodicCheck();
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Plugin loaded successfully");
+    this.log("Plugin loaded successfully");
     window.embeddedNoteEnhancerPlugin = this;
   }
   /** 冷启动短期高频扫描，覆盖二层嵌套渲染滞后 */
@@ -272,8 +295,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       if (current === this.lastEmbeddedCount || Date.now() > deadline) {
         clearInterval(this.bootstrapSweepInterval);
         this.bootstrapSweepInterval = void 0;
-        if (this.debugVerbose)
-          console.log("[EmbeddedNoteEnhancer] Bootstrap sweep completed");
+        this.log("Bootstrap sweep completed");
         return;
       }
       this.lastEmbeddedCount = current;
@@ -286,8 +308,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (!block.matches(".markdown-embed, .internal-embed"))
       return;
     if (this.isImageEmbed(block)) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Skipping style application for image embed:`, block);
+      this.log(`Skipping style application for image embed`);
       return;
     }
     const level = this.calculateNestLevel(block);
@@ -311,8 +332,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     }
   }
   onunload() {
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Plugin unloading...");
+    this.log("Plugin unloading...");
     try {
       delete window.embeddedNoteEnhancerPlugin;
     } catch (e) {
@@ -331,6 +351,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (this.bootstrapSweepInterval) {
       clearInterval(this.bootstrapSweepInterval);
       this.bootstrapSweepInterval = void 0;
+    }
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
     }
     this.saveCurrentCollapseStates();
     this.embeddedBlocks.clear();
@@ -352,8 +376,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       }
     } catch (e) {
     }
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Plugin unloaded successfully");
+    this.log("Plugin unloaded successfully");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -368,6 +391,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     this.mutationObserver = new MutationObserver((mutations) => {
       const activeElement = document.activeElement;
       if (activeElement && activeElement.closest(".embedded-note-editor") || document.querySelector("textarea.embedded-note-editor")) {
+        return;
+      }
+      if (this.filesBeingCreated.size > 0) {
+        this.log(`Skipping mutation processing due to files being created: ${Array.from(this.filesBeingCreated)}`);
         return;
       }
       let shouldProcess = false;
@@ -743,6 +770,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 处理嵌入块，添加标题栏
    */
   processEmbeddedBlocks() {
+    if (this.filesBeingCreated.size > 0) {
+      this.log(`Skipping processEmbeddedBlocks due to files being created: ${Array.from(this.filesBeingCreated)}`);
+      return;
+    }
     this.throttledProcess("processEmbeddedBlocks", () => {
       const activeView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
       if (!activeView)
@@ -751,7 +782,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       if (!container)
         return;
       this.processEmbeddedBlocksIn(container);
-    }, 150);
+    }, 200);
   }
   /**
    * 在指定容器内处理嵌入块
@@ -764,7 +795,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (embeddedBlocks.length === 0) {
       embeddedBlocks = container.querySelectorAll('[data-type="markdown-embed"]');
     }
-    this.logOnce("found-embeds-" + embeddedBlocks.length, `[EmbeddedNoteEnhancer] Found ${embeddedBlocks.length} embedded blocks in container`);
+    this.logOnce("found-embeds", `Found ${embeddedBlocks.length} embedded blocks`);
     const blocksArray = Array.from(embeddedBlocks);
     blocksArray.sort((a, b) => {
       const aLevel = this.calculateNestLevel(a);
@@ -798,43 +829,32 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    */
   processNestedEmbeds(container, depth = 0) {
     if (depth > 10) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Maximum recursion depth reached in processNestedEmbeds`);
+      this.warn(`Maximum recursion depth reached in processNestedEmbeds`);
       return;
     }
     if (this.processingContainers.has(container)) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Container already being processed, skipping`);
+      this.log(`Container already being processed, skipping`);
       return;
     }
     const activeView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
     if ((activeView == null ? void 0 : activeView.file) && !this.shouldReprocessNestedEmbeds(activeView.file.path)) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Skipping nested processing due to cache`);
+      this.log(`Skipping nested processing due to cache`);
       return;
     }
     this.processingContainers.add(container);
     const allEmbeds = container.querySelectorAll('.markdown-embed, .internal-embed, [data-type="markdown-embed"]');
-    this.logOnce("nested-total-" + allEmbeds.length, `[EmbeddedNoteEnhancer] Found ${allEmbeds.length} total embeds in nested processing`);
+    this.logOnce("nested-total", `Found ${allEmbeds.length} total embeds in nested processing`);
     let hasNewEmbeds = false;
     let processedCount = 0;
     let imageEmbedCount = 0;
     allEmbeds.forEach((embedBlock) => {
-      var _a, _b;
       if (this.isImageEmbed(embedBlock)) {
         imageEmbedCount++;
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Skipping nested image embed:`, embedBlock);
+        this.log(`Skipping nested image embed`);
         return;
       }
       if (!embedBlock.hasAttribute("data-title-bar-added")) {
-        if (this.debugVerbose) {
-          console.log(`[EmbeddedNoteEnhancer] Processing nested embed:`, embedBlock);
-          console.log(`[EmbeddedNoteEnhancer] Block classes:`, embedBlock.className);
-          console.log(`[EmbeddedNoteEnhancer] Block attributes:`, Array.from(embedBlock.attributes).map((attr) => `${attr.name}="${attr.value}"`));
-          console.log(`[EmbeddedNoteEnhancer] Block children:`, Array.from(embedBlock.children).map((child) => `${child.tagName}.${child.className}`));
-          console.log(`[EmbeddedNoteEnhancer] Block parent:`, (_a = embedBlock.parentElement) == null ? void 0 : _a.tagName, (_b = embedBlock.parentElement) == null ? void 0 : _b.className);
-        }
+        this.log(`Processing nested embed: ${embedBlock.className}`);
         this.processEmbeddedBlock(embedBlock);
         processedCount++;
         hasNewEmbeds = true;
@@ -844,7 +864,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       this.cacheFileEmbedStructure(activeView.file.path, allEmbeds.length, imageEmbedCount > 0);
     }
     if (hasNewEmbeds && processedCount > 0) {
-      this.logOnce("nested-processing-again", `[EmbeddedNoteEnhancer] Found new nested embeds, processing again...`);
+      this.logOnce("nested-processing-again", "Found new nested embeds, processing again...");
       setTimeout(() => {
         this.processNestedEmbeds(container, depth + 1);
       }, 50);
@@ -859,7 +879,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 处理所有可能的嵌套嵌入（更全面的方法）
    */
   processAllNestedEmbeds(container) {
-    this.logOnce("all-nested-start", `[EmbeddedNoteEnhancer] Processing all nested embeds with comprehensive method`);
+    this.logOnce("all-nested-start", "Processing all nested embeds with comprehensive method");
     const allPossibleEmbeds = container.querySelectorAll(`
 			.markdown-embed,
 			.internal-embed,
@@ -869,18 +889,17 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
 			.internal-embed-content .markdown-embed,
 			.internal-embed-content .internal-embed
 		`);
-    this.logOnce("all-nested-count-" + allPossibleEmbeds.length, `[EmbeddedNoteEnhancer] Found ${allPossibleEmbeds.length} possible embeds with comprehensive method`);
+    this.logOnce("all-nested-count", `Found ${allPossibleEmbeds.length} possible embeds with comprehensive method`);
     allPossibleEmbeds.forEach((embedBlock) => {
       if (!embedBlock.hasAttribute("data-title-bar-added")) {
         if (this.isImageEmbed(embedBlock)) {
-          if (this.debugVerbose)
-            console.log(`[EmbeddedNoteEnhancer] Skipping comprehensive processing of image embed:`, embedBlock);
+          this.log(`Skipping comprehensive processing of image embed`);
           return;
         }
         try {
           this.processEmbeddedBlock(embedBlock);
         } catch (error) {
-          console.error(`[EmbeddedNoteEnhancer] Error processing embed:`, error);
+          this.error(`Error processing embed:`, error);
         }
       }
       this.applyUnifiedBlockStyles(embedBlock);
@@ -966,7 +985,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         return;
       }
     }
-    this.logOnce("process-block-" + block.tagName + "-" + block.className, `[EmbeddedNoteEnhancer] Processing block: ${block.tagName} ${block.className}`);
+    this.logOnce("process-block", `Processing ${block.tagName} block`);
     let href = null;
     let embedLink = block.querySelector(".markdown-embed-link");
     if (!embedLink)
@@ -986,7 +1005,21 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (!fileName) {
       return;
     }
+    if (fileName.trim() === "" || fileName === " ") {
+      return;
+    }
+    if (fileName.includes("[") || fileName.includes("]") || fileName.includes("!")) {
+      if (this.debugVerbose)
+        console.log(`[EmbeddedNoteEnhancer] Skipping malformed embed syntax: ${href}`);
+      return;
+    }
+    if (fileName.includes(" ") || fileName.includes("\n") || fileName.includes("	")) {
+      if (this.debugVerbose)
+        console.log(`[EmbeddedNoteEnhancer] Skipping embed with special characters: ${href}`);
+      return;
+    }
     let fileExists = false;
+    let isFileBeingCreated = false;
     const resolvedFile = this.app.metadataCache.getFirstLinkpathDest(fileName, ((_a = this.app.workspace.getActiveFile()) == null ? void 0 : _a.path) || "");
     if (resolvedFile) {
       fileExists = true;
@@ -998,20 +1031,52 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         const mdFile = this.app.vault.getAbstractFileByPath(`${fileName}.md`);
         if (mdFile) {
           fileExists = true;
+        } else {
+          isFileBeingCreated = this.filesBeingCreated.has(fileName) || this.filesBeingCreated.has(`${fileName}.md`);
         }
       }
     }
-    this.logOnce("file-exists-" + fileName + "-" + fileExists, `[EmbeddedNoteEnhancer] File exists check for ${fileName}: ${fileExists}`);
+    this.logOnce("file-exists", `File check: ${fileName} - exists: ${fileExists}`);
     if (!fileExists) {
-      console.log(`[EmbeddedNoteEnhancer] File does not exist, removing enhancement for ${fileName}`);
-      this.removeEnhancement(block);
-      return;
+      if (isFileBeingCreated) {
+        this.log(`File being created, delaying: ${fileName}`);
+        const recursionCount = parseInt(block.getAttribute("data-recursion-count") || "0");
+        if (recursionCount >= 3) {
+          this.warn(`Maximum recursion depth reached for file creation: ${fileName}, removing enhancement`);
+          this.removeEnhancement(block);
+          return;
+        }
+        block.setAttribute("data-recursion-count", String(recursionCount + 1));
+        setTimeout(() => {
+          this.processEmbeddedBlock(block);
+        }, 2e3);
+        return;
+      } else {
+        if (fileName && fileName.trim() !== "" && fileName !== " " && !fileName.includes("[") && !fileName.includes("]") && !fileName.includes("!") && !fileName.includes(" ") && !fileName.includes("\n") && !fileName.includes("	")) {
+          this.filesBeingCreated.add(fileName);
+          this.filesBeingCreated.add(`${fileName}.md`);
+          console.log(`[EmbeddedNoteEnhancer] Detected file creation: ${fileName}`);
+          setTimeout(() => {
+            this.filesBeingCreated.delete(fileName);
+            this.filesBeingCreated.delete(`${fileName}.md`);
+            this.log(`Cleared file creation tracking for: ${fileName}`);
+          }, 15e3);
+          setTimeout(() => {
+            this.processEmbeddedBlock(block);
+          }, 2e3);
+          return;
+        } else {
+          this.warn(`File does not exist and name appears incomplete, removing enhancement: ${fileName}`);
+          this.removeEnhancement(block);
+          return;
+        }
+      }
     }
     const nestLevel = this.calculateNestLevel(block);
     const blockId = this.generateBlockId(block, fileName);
     const existingTitleBar = block.querySelector(".embedded-note-title-bar");
     if (existingTitleBar) {
-      this.logOnce("title-exists-" + blockId, `[EmbeddedNoteEnhancer] Title bar already exists for block ${blockId}, skipping insertion`);
+      this.logOnce("title-exists", `Title bar already exists, skipping`);
       return;
     }
     const titleBar = this.createTitleBar(fileName, blockId, nestLevel);
@@ -1088,9 +1153,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     this.embeddedBlocks.set(blockId, block);
     const isCollapsed = this.collapseStates.get(blockId) || false;
     this.setBlockCollapsed(block, isCollapsed);
-    const createdTitleBar = block.querySelector(".embedded-note-title-bar");
-    if (this.debugVerbose)
-      console.log(`[EmbeddedNoteEnhancer] Title bar created for block ${blockId}:`, !!createdTitleBar, createdTitleBar);
+    if (this.debugVerbose) {
+      const createdTitleBar = block.querySelector(".embedded-note-title-bar");
+      this.log(`Title bar created for block ${blockId}: ${!!createdTitleBar}`);
+    }
   }
   /**
    * 计算嵌套层级
@@ -1114,8 +1180,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const titleBar = document.createElement("div");
     titleBar.className = "embedded-note-title-bar";
     titleBar.setAttribute("data-block-id", blockId);
-    if (this.debugVerbose)
-      console.log(`[EmbeddedNoteEnhancer] Creating title bar for ${fileName} with class: ${titleBar.className}`);
+    this.log(`Creating title bar for ${fileName}`);
     titleBar.style.cssText = `
 			background-color: var(--background-secondary);
 			color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
@@ -1204,8 +1269,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         return;
       const editing = block.getAttribute("data-editing") === "true";
       if (editing) {
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Disabling inline editing for block ${blockId}`);
+        this.log(`Disabling inline editing for block ${blockId}`);
         if (this.settings.manualSaveOnly) {
           const editor = embedContent.querySelector("textarea.embedded-note-editor");
           if (editor) {
@@ -1231,8 +1295,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
           }
         }
       } else {
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Enabling inline editing for block ${blockId}`);
+        this.log(`Enabling inline editing for block ${blockId}`);
         if (block.classList.contains("embedded-note-collapsed")) {
           this.toggleBlockCollapse(blockId);
           setTimeout(() => {
@@ -1278,26 +1341,23 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         if (this.settings.jumpInNewTab) {
           const leaf = this.app.workspace.getLeaf("tab");
           leaf.openFile(file);
-          if (this.debugVerbose)
-            console.log(`[EmbeddedNoteEnhancer] Jumped to file in new tab: ${file.path}`);
+          this.log(`Jumped to file in new tab: ${file.path}`);
         } else {
           const activeLeaf = (_a = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView)) == null ? void 0 : _a.leaf;
           if (activeLeaf) {
             activeLeaf.openFile(file);
-            if (this.debugVerbose)
-              console.log(`[EmbeddedNoteEnhancer] Jumped to file in current view: ${file.path}`);
+            this.log(`Jumped to file in current view: ${file.path}`);
           } else {
             const leaf = this.app.workspace.getLeaf("tab");
             leaf.openFile(file);
-            if (this.debugVerbose)
-              console.log(`[EmbeddedNoteEnhancer] No active Markdown view, opened in new tab: ${file.path}`);
+            this.log(`No active Markdown view, opened in new tab: ${file.path}`);
           }
         }
       } else {
-        console.warn(`[EmbeddedNoteEnhancer] File not found: ${fileName}`);
+        this.warn(`File not found: ${fileName}`);
       }
     } catch (error) {
-      console.error(`[EmbeddedNoteEnhancer] Error jumping to file ${fileName}:`, error);
+      this.error(`Error jumping to file ${fileName}:`, error);
     }
   }
   /**
@@ -1361,10 +1421,8 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       const file = this.resolveLinkedFile(block);
       if (file) {
         this.editingFiles.delete(file.path);
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Removed file from editing set: ${file.path}`);
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Current editing files: ${Array.from(this.editingFiles)}`);
+        this.log(`Removed file from editing set: ${file.path}`);
+        this.log(`Current editing files: ${Array.from(this.editingFiles)}`);
       }
     }
     embedContent.contentEditable = "false";
@@ -1417,12 +1475,11 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   handleFileModify(file) {
     this.clearFileCache(file.path);
     if (this.editingFiles.has(file.path)) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Skipping file modify for editing file: ${file.basename}`);
+      this.log(`Skipping file modify for editing file: ${file.basename}`);
       return;
     }
     if (document.querySelector("textarea.embedded-note-editor")) {
-      this.logOnce("skip-modify-during-edit", "[EmbeddedNoteEnhancer] Skip file modify: editor active");
+      this.logOnce("skip-modify-during-edit", "Skip file modify: editor active");
       return;
     }
     const activeElement = document.activeElement;
@@ -1438,12 +1495,11 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   handleFileSave(file) {
     this.clearFileCache(file.path);
     if (this.editingFiles.has(file.path)) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Skipping file save for editing file: ${file.basename}`);
+      this.log(`Skipping file save for editing file: ${file.basename}`);
       return;
     }
     if (document.querySelector("textarea.embedded-note-editor")) {
-      this.logOnce("skip-save-during-edit", "[EmbeddedNoteEnhancer] Skip file save: editor active");
+      this.logOnce("skip-save-during-edit", "Skip file save: editor active");
       return;
     }
     setTimeout(() => {
@@ -1458,7 +1514,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    */
   handleFileModifyDelayed(file) {
     if (this.editingFiles.has(file.path)) {
-      console.log(`[EmbeddedNoteEnhancer] Skipping delayed file modify for editing file: ${file.basename}`);
+      this.log(`Skipping delayed file modify for editing file: ${file.basename}`);
       return;
     }
     const fileName = file.basename;
@@ -1469,22 +1525,18 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         return;
       const blockReferencedFile = this.resolveLinkedFile(block);
       if (!blockReferencedFile) {
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Cannot resolve file for block with link: ${blockFileLink}, removing enhancement`);
+        this.warn(`Cannot resolve file for block, removing enhancement: ${blockFileLink}`);
         this.removeEnhancement(block);
         return;
       }
       if (blockReferencedFile.path === filePath) {
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Found block referencing modified file ${fileName}`);
+        this.log(`Found block referencing modified file ${fileName}`);
         const exists = this.checkEmbedFileExists(block);
         if (!exists) {
-          if (this.debugVerbose)
-            console.log(`[EmbeddedNoteEnhancer] File ${fileName} no longer exists, removing enhancement`);
+          this.warn(`File no longer exists, removing enhancement: ${fileName}`);
           this.removeEnhancement(block);
         } else {
-          if (this.debugVerbose)
-            console.log(`[EmbeddedNoteEnhancer] File ${fileName} still exists, maintaining current state`);
+          this.log(`File still exists, maintaining current state: ${fileName}`);
         }
       }
     });
@@ -1496,8 +1548,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    */
   reprocessAllNestedEmbeds() {
     if (this.editingFiles.size > 0 || document.querySelector('[data-freeze="true"]') || document.querySelector("textarea.embedded-note-editor")) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Skipping reprocessAllNestedEmbeds due to editing files: ${Array.from(this.editingFiles)}`);
+      this.log(`Skipping reprocessAllNestedEmbeds due to editing files: ${Array.from(this.editingFiles)}`);
       return;
     }
     const activeView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
@@ -1509,7 +1560,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (!this.shouldReprocessNestedEmbeds(file.path)) {
       return;
     }
-    this.logOnce("reprocess-nested", `[EmbeddedNoteEnhancer] Reprocessing all nested embeds after file modification`);
+    this.logOnce("reprocess-nested", "Reprocessing all nested embeds after file modification");
     const container = activeView.contentEl;
     if (!container)
       return;
@@ -1519,23 +1570,19 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     allEmbeds.forEach((embedBlock) => {
       if (this.isImageEmbed(embedBlock)) {
         imageEmbedCount++;
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Skipping reprocess of image embed:`, embedBlock);
+        this.log(`Skipping reprocess of image embed`);
         return;
       }
       if (!embedBlock.hasAttribute("data-title-bar-added")) {
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Reprocessing unprocessed embed:`, embedBlock);
+        this.log(`Reprocessing unprocessed embed`);
         this.processEmbeddedBlock(embedBlock);
         reprocessedCount++;
       } else {
-        if (this.debugVerbose)
-          console.log(`[EmbeddedNoteEnhancer] Embed already processed, skipping:`, embedBlock);
+        this.log(`Embed already processed, skipping`);
       }
     });
     this.cacheFileEmbedStructure(file.path, allEmbeds.length, imageEmbedCount > 0);
-    if (this.debugVerbose)
-      console.log(`[EmbeddedNoteEnhancer] Reprocessed ${reprocessedCount} nested embeds, found ${imageEmbedCount} image embeds`);
+    this.log(`Reprocessed ${reprocessedCount} nested embeds, found ${imageEmbedCount} image embeds`);
     if (reprocessedCount > 0) {
       setTimeout(() => {
         this.processNestedEmbeds(container, 0);
@@ -1559,10 +1606,8 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const file = this.resolveLinkedFile(block);
     if (file) {
       this.editingFiles.add(file.path);
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Added file to editing set: ${file.path}`);
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Current editing files: ${Array.from(this.editingFiles)}`);
+      this.log(`Added file to editing set: ${file.path}`);
+      this.log(`Current editing files: ${Array.from(this.editingFiles)}`);
     }
     const editors = Array.from(embedContent.querySelectorAll("textarea.embedded-note-editor"));
     if (editors.length > 1) {
@@ -1692,8 +1737,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         const hasOnlyImage = embedContent.children.length === 1 && embedContent.querySelector("img") && textContent.length < 10;
         if (!hasOnlyImage) {
           isImage = false;
-          if (this.debugVerbose)
-            console.log(`[EmbeddedNoteEnhancer] Text embed with image detected, not excluding:`, block);
+          this.log(`Text embed with image detected, not excluding`);
         }
       }
     }
@@ -1715,8 +1759,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const now = Date.now();
     const lastTime = this.processingThrottle.get(key) || 0;
     if (now - lastTime < delay) {
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Throttling ${key}, last processed ${now - lastTime}ms ago`);
+      this.log(`Throttling ${key}, last processed ${now - lastTime}ms ago`);
       return;
     }
     this.processingThrottle.set(key, now);
@@ -1735,8 +1778,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       this.fileEmbedStructure.delete(filePath);
       return true;
     }
-    if (this.debugVerbose)
-      console.log(`[EmbeddedNoteEnhancer] Skipping nested processing for ${filePath} (cached ${Math.round((now - cached.timestamp) / 1e3)}s ago)`);
+    this.log(`Skipping nested processing for ${filePath} (cached ${Math.round((now - cached.timestamp) / 1e3)}s ago)`);
     return false;
   }
   /**
@@ -1755,8 +1797,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   clearFileCache(filePath) {
     this.fileEmbedStructure.delete(filePath);
     this.processedFiles.delete(filePath);
-    if (this.debugVerbose)
-      console.log(`[EmbeddedNoteEnhancer] Cleared cache for file: ${filePath}`);
+    this.log(`Cleared cache for file: ${filePath}`);
   }
   /**
    * 预加载文件类型缓存，提升性能
@@ -1791,8 +1832,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
           }
         }
       });
-      if (this.debugVerbose)
-        console.log(`[EmbeddedNoteEnhancer] Preloaded ${fileLinks.size} file types`);
+      this.log(`Preloaded ${fileLinks.size} file types`);
     } catch (error) {
       if (this.debugVerbose)
         console.warn("[EmbeddedNoteEnhancer] Error preloading file type cache:", error);
@@ -1889,7 +1929,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     try {
       const file = this.resolveLinkedFile(block);
       if (!file) {
-        console.warn("[EmbeddedNoteEnhancer] Cannot resolve file for block");
+        this.warn("Cannot resolve file for block");
         return;
       }
       this.editingFiles.add(file.path);
@@ -1900,7 +1940,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         this.editingFiles.delete(file.path);
       }, 1e3);
     } catch (error) {
-      console.error("\u4FDD\u5B58\u5D4C\u5165\u5185\u5BB9\u5931\u8D25:", error);
+      this.error("\u4FDD\u5B58\u5D4C\u5165\u5185\u5BB9\u5931\u8D25:", error);
       this.showSaveIndicator(editor, false);
       const file = this.resolveLinkedFile(block);
       if (file) {
@@ -2000,8 +2040,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 手动触发处理（调试用）
    */
   manualTrigger() {
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] Manual trigger called");
+    this.log("Manual trigger called");
     this.processEmbeddedBlocks();
     setTimeout(() => {
       this.reprocessAllNestedEmbeds();
@@ -2068,8 +2107,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    */
   removeAllTitleBars() {
     var _a, _b;
-    if (this.debugVerbose)
-      console.log("[EmbeddedNoteEnhancer] removeAllTitleBars called");
+    this.log("removeAllTitleBars called");
     const enhancedBlocks = document.querySelectorAll(".markdown-embed[data-embedded-note-enhanced], .internal-embed[data-embedded-note-enhanced]");
     enhancedBlocks.forEach((el) => {
       this.removeTrackedEventListenersForRoot(el);
@@ -2182,6 +2220,10 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     }));
     new import_obsidian.Setting(containerEl).setName("\u4EC5\u624B\u52A8\u4FDD\u5B58").setDesc("\u5173\u95ED\u81EA\u52A8\u4FDD\u5B58\uFF0C\u4EC5\u5728 Ctrl+S \u6216\u70B9\u51FB\u5B8C\u6210\u65F6\u4FDD\u5B58").addToggle((toggle) => toggle.setValue(this.plugin.settings.manualSaveOnly).onChange(async (value) => {
       this.plugin.settings.manualSaveOnly = value;
+      await this.plugin.saveSettings();
+    }));
+    new import_obsidian.Setting(containerEl).setName("\u8C03\u8BD5\u6A21\u5F0F").setDesc("\u5F00\u542F\u540E\u4F1A\u5728\u63A7\u5236\u53F0\u8F93\u51FA\u8BE6\u7EC6\u7684\u8C03\u8BD5\u4FE1\u606F\uFF0C\u7528\u4E8E\u95EE\u9898\u6392\u67E5").addToggle((toggle) => toggle.setValue(this.plugin.settings.debugMode).onChange(async (value) => {
+      this.plugin.settings.debugMode = value;
       await this.plugin.saveSettings();
     }));
   }
