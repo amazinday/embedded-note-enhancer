@@ -90,22 +90,22 @@
 
 ### 展开状态
 
-![展开状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/expanded.png)
+<img width="1058" height="885" alt="expanded" src="https://github.com/user-attachments/assets/9b1fa44f-8d6f-45f9-9538-d0af166b95ca" />
 
 ### 折叠状态
 
-![折叠状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/collapsed.png)
+<img width="1057" height="138" alt="collapsed" src="https://github.com/user-attachments/assets/fd59bad7-be2a-419b-bf1a-f9a73ec8c0ec" />
 
 ### 编辑状态
 
-![编辑状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/editing.png)
+<img width="1065" height="822" alt="editing" src="https://github.com/user-attachments/assets/de657cc7-1fbd-450e-a764-ad51ac0afb0e" />
 
 ## 🔧 高级功能
 
 ### 嵌套嵌入支持
 插件完全支持嵌套嵌入，每个层级的嵌入都会获得独立的标题栏：
 
-![嵌套状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/nested.png)
+<img width="1050" height="451" alt="nested" src="https://github.com/user-attachments/assets/782af861-d988-417b-8bd0-add32ec829ea" />
 
 ### 图片嵌入智能识别
 插件会自动识别图片嵌入，不对其添加标题栏，保持 Obsidian 原生显示效果。
