@@ -1,7 +1,7 @@
 {
 	"id": "embedded-note-enhancer",
 	"name": "Embedded Note Enhancer",
-	"version": "0.1.1",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "为嵌入的笔记添加可点击的标题栏，支持折叠/展开和原地编辑功能",
 	"author": "amazinday",
