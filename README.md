@@ -30,7 +30,7 @@
 
 #### 方式二：手动安装
 1. 下载 [最新版本](https://github.com/amazinday/embedded-note-enhancer/releases/latest)
-2. 解压下载的 `embedded-note-enhancer-v0.1.0.zip` 文件
+2. 解压下载的 `embedded-note-enhancer-1.0.0.zip` 文件
 3. 将 `main.js`、`manifest.json` 和 `styles.css` 复制到你的 vault 的 `.obsidian/plugins/embedded-note-enhancer/` 文件夹中
 4. 重新加载 Obsidian
 5. 在设置 → 第三方插件中启用 "Embedded Note Enhancer"
@@ -39,7 +39,7 @@
 
 | 版本 | 发布日期 | 下载链接 | 说明 |
 |------|----------|----------|------|
-| v0.1.0 | 2024-09-21 | [📥 下载](https://github.com/amazinday/embedded-note-enhancer/releases/download/v0.1.0/embedded-note-enhancer-v0.1.0.zip) | 首次发布版本 |
+| 1.0.0 | 2024-09-23 | [📥 下载](https://github.com/amazinday/embedded-note-enhancer/releases/download/1.0.0/embedded-note-enhancer-1.0.0.zip) | 正式版发布 |
 
 > 💡 **提示**: 如果没有看到社区插件市场选项，可以直接下载最新版本进行手动安装。
 
@@ -90,22 +90,22 @@
 
 ### 展开状态
 
-![展开状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/expanded.png)
+<img width="1058" height="885" alt="expanded" src="https://github.com/user-attachments/assets/9b1fa44f-8d6f-45f9-9538-d0af166b95ca" />
 
 ### 折叠状态
 
-![折叠状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/collapsed.png)
+<img width="1057" height="138" alt="collapsed" src="https://github.com/user-attachments/assets/fd59bad7-be2a-419b-bf1a-f9a73ec8c0ec" />
 
 ### 编辑状态
 
-![编辑状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/editing.png)
+<img width="1065" height="822" alt="editing" src="https://github.com/user-attachments/assets/de657cc7-1fbd-450e-a764-ad51ac0afb0e" />
 
 ## 🔧 高级功能
 
 ### 嵌套嵌入支持
 插件完全支持嵌套嵌入，每个层级的嵌入都会获得独立的标题栏：
 
-![嵌套状态](https://github.com/amazinday/embedded-note-enhancer/blob/main/images/nested.png)
+<img width="1050" height="451" alt="nested" src="https://github.com/user-attachments/assets/782af861-d988-417b-8bd0-add32ec829ea" />
 
 ### 图片嵌入智能识别
 插件会自动识别图片嵌入，不对其添加标题栏，保持 Obsidian 原生显示效果。
@@ -215,15 +215,17 @@ embedded-note-enhancer/
 
 ## 📈 更新日志
 
-### v0.1.0 (2024-09-21)
-- ✨ 初始版本发布
-- 🎯 支持嵌入笔记标题栏
-- 📁 支持折叠/展开功能
-- ✏️ 支持原地编辑
-- 🔗 支持快速跳转
-- 🎨 主题兼容性优化
-- 📱 响应式设计支持
-- 🔄 嵌套嵌入支持
+### 1.0.0 (2024-09-23)
+- 🎉 正式版发布
+- 🎯 智能标题栏 - 为嵌入笔记添加可交互标题栏
+- 📁 折叠/展开功能 - 支持状态记忆
+- ✏️ 原地编辑 - 无需跳转即可编辑内容
+- 🔗 快速跳转 - 一键跳转到源文件
+- 🎨 主题兼容 - 完美适配各种主题
+- 📱 响应式设计 - 支持移动端和桌面端
+- 🔄 嵌套支持 - 完全支持多层嵌套嵌入
+- ⚙️ 丰富配置 - 多种自定义选项
+- 🐛 稳定性优化 - 修复已知问题，提升用户体验
 
 ---
 
