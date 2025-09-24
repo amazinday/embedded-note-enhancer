@@ -1,8 +1,22 @@
-/* Embedded Note Titles Plugin Styles */
+/* Embedded Note Enhancer Plugin Styles */
 
 .embedded-note-title-bar {
 	position: relative;
 	z-index: 1;
+	transition: all 0.2s ease;
+	box-sizing: border-box;
+	width: 100%;
+	background-color: var(--background-secondary);
+	color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
+	font-size: 14px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	user-select: none;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	transition: background-color 0.2s ease;
 }
 
 .embedded-note-title-bar:hover {
@@ -15,11 +29,171 @@
 
 .embedded-note-collapse-icon {
 	opacity: 0.7;
+	color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
 	transition: transform 0.2s ease, opacity 0.2s ease;
+	font-size: 12px;
+	display: inline-block;
+	margin-left: 8px;
 }
 
 .embedded-note-title-bar:hover .embedded-note-collapse-icon {
 	opacity: 1;
+	color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
+}
+
+/* 编辑按钮样式 */
+.embedded-note-edit-btn {
+	background: var(--background-primary) !important;
+	color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+	border: 1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+	transition: all 0.2s ease !important;
+	margin-left: 8px;
+	font-size: 12px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.embedded-note-edit-btn:hover {
+	background: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+	color: var(--background-primary) !important;
+	border-color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+}
+
+.embedded-note-edit-btn:active {
+	background: var(--background-modifier-active) !important;
+}
+
+/* 跳转按钮样式 */
+.embedded-note-jump-btn {
+	background: var(--background-primary) !important;
+	color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+	border: 1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+	transition: all 0.2s ease !important;
+	margin-left: 8px;
+	font-size: 12px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.embedded-note-jump-btn:hover {
+	background: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+	color: var(--background-primary) !important;
+	border-color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed))) !important;
+}
+
+.embedded-note-jump-btn:active {
+	background: var(--background-modifier-active) !important;
+}
+
+/* 标题文本样式 */
+.embedded-note-title-text {
+	flex: 1;
+	font-weight: 500;
+	margin-left: 0px;
+}
+
+.embedded-note-title-text.nested {
+	margin-left: 4px;
+}
+
+/* 强制覆盖所有可能的主题样式 - 最高优先级 */
+.markdown-embed[data-embedded-note-enhanced="true"],
+.internal-embed[data-embedded-note-enhanced="true"],
+div.markdown-embed[data-embedded-note-enhanced="true"],
+span.internal-embed[data-embedded-note-enhanced="true"] {
+	margin-left: 0px !important;
+	margin-right: 0px !important;
+	margin-top: 0px !important;
+	margin-bottom: 0px !important;
+	box-sizing: border-box !important;
+}
+
+/* Ensure span.internal-embed behaves like a block when enhanced */
+.internal-embed[data-embedded-note-enhanced="true"],
+.markdown-embed[data-embedded-note-enhanced="true"] {
+	display: block;
+	width: 100%;
+}
+
+/* Hide Obsidian's default embed header and open-link icon only when enhanced */
+.markdown-embed[data-embedded-note-enhanced="true"] .markdown-embed-title,
+.markdown-embed[data-embedded-note-enhanced="true"] .markdown-embed-link,
+.internal-embed[data-embedded-note-enhanced="true"] .embed-title,
+.internal-embed[data-embedded-note-enhanced="true"] .markdown-embed-link {
+	display: none !important;
+}
+
+/* When collapsed, hide everything except our custom title bar */
+.markdown-embed.embedded-note-collapsed[data-embedded-note-enhanced="true"] > :not(.embedded-note-title-bar),
+.internal-embed.embedded-note-collapsed[data-embedded-note-enhanced="true"] > :not(.embedded-note-title-bar) {
+	display: none !important;
+}
+
+/* 统一的嵌入块样式（同时覆盖 markdown-embed 与 internal-embed） */
+.markdown-embed[data-embedded-note-enhanced="true"],
+.internal-embed[data-embedded-note-enhanced="true"] {
+	margin-top: 0px;
+	margin-bottom: 0px;
+	border-radius: 6px;
+	overflow: hidden;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	transition: all 0.2s ease;
+	border: 1px solid var(--background-modifier-border);
+	padding: 0; /* 均衡不同类型容器的默认内边距差异 */
+}
+
+.markdown-embed[data-embedded-note-enhanced="true"]:hover {
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* 嵌套层级样式 - 外框与外层间距：左边7px/层，右边14px/层 */
+/* 使用更高优先级的选择器确保样式生效 */
+.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="0"],
+.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="0"],
+div.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="0"],
+span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="0"] {
+	margin-left: 0px !important;
+	margin-right: 0px !important;
+	box-sizing: border-box !important;
+}
+
+.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="1"],
+.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="1"],
+div.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="1"],
+span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="1"] {
+	margin-left: 7px !important;
+	margin-right: 14px !important;
+	box-sizing: border-box !important;
+}
+
+.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="2"],
+.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="2"],
+div.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="2"],
+span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="2"] {
+	margin-left: 14px !important;
+	margin-right: 28px !important;
+	box-sizing: border-box !important;
+}
+
+.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="3"],
+.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="3"],
+div.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="3"],
+span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="3"] {
+	margin-left: 21px !important;
+	margin-right: 42px !important;
+	box-sizing: border-box !important;
+}
+
+/* 统一的标题栏样式 - 使用Obsidian主题变量 */
+.markdown-embed[data-embedded-note-enhanced="true"] .embedded-note-title-bar,
+.internal-embed[data-embedded-note-enhanced="true"] .embedded-note-title-bar {
+	background-color: var(--background-secondary);
+	color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
+	border-bottom: 1px solid var(--background-modifier-border);
+	position: relative;
+	font-weight: var(--font-weight-normal);
 }
 
 /* 确保与不同主题的兼容性 */
@@ -36,10 +210,78 @@
 	background-color: var(--background-secondary);
 }
 
+/* Blue Topaz 主题兼容性 */
+.blue-topaz .embedded-note-title-bar {
+	background-color: var(--background-secondary);
+}
+
+/* Things 主题兼容性 */
+.things-theme .embedded-note-title-bar {
+	background-color: var(--background-secondary);
+}
+
+/* Dracula 主题兼容性 */
+.dracula-theme .embedded-note-title-bar {
+	background-color: var(--background-secondary);
+}
+
+/* 通用主题兼容性 - 确保在所有主题下都有良好的视觉效果 */
+.markdown-embed[data-embedded-note-enhanced="true"],
+.internal-embed[data-embedded-note-enhanced="true"] {
+	background-color: var(--background-primary);
+}
+
+.markdown-embed[data-embedded-note-enhanced="true"] .markdown-embed-content,
+.internal-embed[data-embedded-note-enhanced="true"] .markdown-embed-content,
+.internal-embed[data-embedded-note-enhanced="true"] .internal-embed-content {
+	background-color: var(--background-primary);
+	padding-left: 14px;
+	padding-right: 14px;
+	box-sizing: border-box;
+}
+
 /* 确保标题栏在嵌入内容上方 */
 .markdown-embed .embedded-note-title-bar {
 	margin: 0;
 	border-radius: 0;
+}
+
+/* 编辑模式样式（使用 textarea 进行原文编辑） */
+.embedded-note-editor {
+	width: 100%;
+	min-height: 140px;
+	box-sizing: border-box;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 8px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-editor);
+	font-size: var(--editor-font-size);
+	line-height: 1.5;
+	resize: vertical;
+}
+
+/* 嵌套嵌入内容的过渡效果 */
+.markdown-embed-content {
+	transition: height 0.3s ease, visibility 0.3s ease;
+}
+
+/* 折叠状态样式 */
+.embedded-note-collapsed .markdown-embed-content,
+.embedded-note-collapsed .internal-embed-content {
+	visibility: hidden;
+	height: 0;
+	overflow: hidden;
+}
+
+.embedded-note-collapsed .embedded-note-collapse-icon {
+	transform: rotate(-90deg);
+}
+
+/* 展开状态样式 */
+.embedded-note-collapse-icon {
+	transform: rotate(0deg);
 }
 
 /* 响应式设计 */
@@ -47,6 +289,27 @@
 	.embedded-note-title-bar {
 		padding: 6px 10px;
 		font-size: 13px;
+	}
+	
+	.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="1"],
+	.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="1"],
+	div.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="1"],
+	span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="1"] {
+		margin-left: 7px !important;
+	}
+	
+	.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="2"],
+	.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="2"],
+	div.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="2"],
+	span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="2"] {
+		margin-left: 14px !important;
+	}
+	
+	.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="3"],
+	.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="3"],
+	div.markdown-embed[data-embedded-note-enhanced="true"][data-nest-level="3"],
+	span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="3"] {
+		margin-left: 21px !important;
 	}
 }
 
@@ -63,4 +326,24 @@
 	.embedded-note-collapse-icon {
 		transition: none;
 	}
+}
+
+/* Toast 样式 */
+.embedded-note-toast {
+	position: absolute;
+	top: 6px;
+	right: 10px;
+	background: var(--background-secondary);
+	color: var(--text-success);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 2px 6px;
+	font-size: 12px;
+	opacity: 0.95;
+	pointer-events: none;
+	z-index: 2;
+}
+
+.embedded-note-toast.error {
+	color: var(--text-error);
 }

@@ -311,24 +311,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       return;
     }
     const level = this.calculateNestLevel(block);
-    block.style.setProperty("margin-left", `${level * 7}px`, "important");
-    block.style.setProperty("margin-right", `${level * 14}px`, "important");
-    block.style.setProperty("margin-top", "0px", "important");
-    block.style.setProperty("margin-bottom", "0px", "important");
-    block.style.setProperty("display", "block", "important");
-    block.style.setProperty("box-sizing", "border-box", "important");
     block.setAttribute("data-nest-level", String(level));
-    const content = this.getEmbedContent(block);
-    if (content) {
-      content.style.setProperty("padding-left", "14px", "important");
-      content.style.setProperty("padding-right", "14px", "important");
-      content.style.setProperty("box-sizing", "border-box", "important");
-    }
-    const titleBar = block.querySelector(".embedded-note-title-bar");
-    if (titleBar) {
-      titleBar.style.setProperty("width", "100%", "important");
-      titleBar.style.setProperty("box-sizing", "border-box", "important");
-    }
   }
   onunload() {
     this.log("Plugin unloading...");
@@ -909,10 +892,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     all.forEach((block) => {
       const level = this.calculateNestLevel(block);
       block.setAttribute("data-nest-level", String(level));
-      block.style.setProperty("margin-left", `${level * 7}px`, "important");
-      block.style.setProperty("margin-right", `${level * 14}px`, "important");
-      block.style.setProperty("margin-top", "0px", "important");
-      block.style.setProperty("margin-bottom", "0px", "important");
+      // 移除直接样式设置，使用CSS类
       this.applyUnifiedBlockStyles(block);
     });
   }
@@ -1108,7 +1088,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       } else {
         block.insertBefore(titleBar, block.firstChild);
       }
-      block.style.display = "block";
+      // 移除直接样式设置，使用CSS类
       block.setAttribute("data-embedded-note-enhanced", "true");
     } else {
       block.insertBefore(titleBar, block.firstChild);
@@ -1118,10 +1098,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     block.setAttribute("data-file-link", fileName);
     block.setAttribute("data-embedded-note-enhanced", "true");
     block.setAttribute("data-nest-level", nestLevel.toString());
-    block.style.setProperty("margin-left", `${nestLevel * 7}px`, "important");
-    block.style.setProperty("margin-right", `${nestLevel * 14}px`, "important");
-    block.style.setProperty("margin-top", "0px", "important");
-    block.style.setProperty("margin-bottom", "0px", "important");
+    // 移除直接样式设置，使用CSS类
     block.setAttribute("data-editing", "false");
     block.setAttribute("tabindex", "-1");
     const keydownHandler = (e) => {
@@ -1173,57 +1150,24 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const titleBar = document.createElement("div");
     titleBar.className = "embedded-note-title-bar";
     titleBar.setAttribute("data-block-id", blockId);
-    titleBar.style.cssText = `
-			background-color: var(--background-secondary);
-			color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
-			font-size: ${this.settings.fontSize};
-			padding: 8px 12px;
-			border-bottom: 1px solid var(--background-modifier-border);
-			cursor: pointer;
-			user-select: none;
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			transition: background-color 0.2s ease;
-		`;
+    titleBar.style.fontSize = this.settings.fontSize;
     const titleText = document.createElement("span");
+    titleText.className = "embedded-note-title-text";
     titleText.textContent = fileName;
-    titleText.style.flex = "1";
-    titleText.style.fontWeight = "500";
-    titleText.style.marginLeft = nestLevel > 0 ? "4px" : "0px";
+    if (nestLevel > 0) {
+      titleText.classList.add("nested");
+    }
     const collapseIcon = document.createElement("span");
     collapseIcon.className = "embedded-note-collapse-icon";
     collapseIcon.textContent = "\u25BC";
-    collapseIcon.style.fontSize = "12px";
-    collapseIcon.style.transition = "transform 0.2s ease";
-    collapseIcon.style.display = "inline-block";
-    collapseIcon.style.marginLeft = "8px";
     const editBtn = document.createElement("button");
     editBtn.className = "embedded-note-edit-btn";
     editBtn.textContent = "\u7F16\u8F91";
-    editBtn.style.marginLeft = "8px";
-    editBtn.style.fontSize = "12px";
-    editBtn.style.padding = "2px 6px";
-    editBtn.style.border = "1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
-    editBtn.style.borderRadius = "4px";
-    editBtn.style.background = "var(--background-primary)";
-    editBtn.style.color = "var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
     editBtn.style.display = this.settings.showEditButton ? "inline-block" : "none";
-    editBtn.style.cursor = "pointer";
-    editBtn.style.transition = "all 0.2s ease";
     const jumpBtn = document.createElement("button");
     jumpBtn.className = "embedded-note-jump-btn";
     jumpBtn.textContent = "\u8DF3\u8F6C";
-    jumpBtn.style.marginLeft = "8px";
-    jumpBtn.style.fontSize = "12px";
-    jumpBtn.style.padding = "2px 6px";
-    jumpBtn.style.border = "1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
-    jumpBtn.style.borderRadius = "4px";
-    jumpBtn.style.background = "var(--background-primary)";
-    jumpBtn.style.color = "var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
     jumpBtn.style.display = this.settings.showJumpButton ? "inline-block" : "none";
-    jumpBtn.style.cursor = "pointer";
-    jumpBtn.style.transition = "all 0.2s ease";
     titleBar.appendChild(titleText);
     if (this.settings.showCollapseIcon && titleBar.getAttribute("data-editing") !== "true") {
       titleBar.appendChild(collapseIcon);
@@ -1234,14 +1178,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (this.settings.showJumpButton) {
       titleBar.appendChild(jumpBtn);
     }
-    const onMouseEnter = () => {
-      titleBar.style.backgroundColor = "var(--background-modifier-hover)";
-    };
-    const onMouseLeave = () => {
-      titleBar.style.backgroundColor = "var(--background-secondary)";
-    };
-    this.addTrackedEventListener(titleBar, "mouseenter", onMouseEnter);
-    this.addTrackedEventListener(titleBar, "mouseleave", onMouseLeave);
+    // 移除鼠标事件处理，使用CSS hover效果
     const onTitleClick = (e) => {
       if (e.target.closest(".embedded-note-edit-btn") || e.target.closest(".embedded-note-jump-btn"))
         return;
@@ -1279,10 +1216,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
             const newIcon = document.createElement("span");
             newIcon.className = "embedded-note-collapse-icon";
             newIcon.textContent = "\u25BC";
-            newIcon.style.fontSize = "12px";
-            newIcon.style.transition = "transform 0.2s ease";
-            newIcon.style.display = "inline-block";
-            newIcon.style.marginLeft = "8px";
+            // 移除直接样式设置，使用CSS类
             titleBar.appendChild(newIcon);
           }
         }
@@ -1384,26 +1318,14 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (collapsed) {
       block.classList.add("embedded-note-collapsed");
       if (embedContent) {
-        embedContent.style.visibility = "hidden";
-        embedContent.style.height = "0";
-        embedContent.style.overflow = "hidden";
         this.disableInlineEditing(embedContent);
-      }
-      if (collapseIcon) {
-        collapseIcon.style.transform = "rotate(-90deg)";
       }
     } else {
       block.classList.remove("embedded-note-collapsed");
       if (embedContent) {
-        embedContent.style.visibility = "visible";
-        embedContent.style.height = "";
-        embedContent.style.overflow = "";
         if (block.getAttribute("data-editing") === "true") {
           this.enableInlineEditing(block);
         }
-      }
-      if (collapseIcon) {
-        collapseIcon.style.transform = "rotate(0deg)";
       }
     }
     block.setAttribute("data-nest-level", String(this.calculateNestLevel(block)));
@@ -1444,21 +1366,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       editor.style.pointerEvents = "none";
       editor.oninput = null;
     }
-    embedContent.style.position = "";
-    embedContent.style.border = "";
-    embedContent.style.borderRadius = "";
-    embedContent.style.padding = "";
-    embedContent.style.backgroundColor = "";
     const indicator = embedContent.querySelector(".embedded-note-edit-indicator");
     if (indicator) {
       indicator.remove();
     }
-    embedContent.style.position = "";
-    embedContent.style.border = "";
-    embedContent.style.borderRadius = "";
-    embedContent.style.padding = "";
-    embedContent.style.backgroundColor = "";
-    embedContent.style.display = "block";
     const blockEl = embedContent.closest(".markdown-embed, .internal-embed");
     if (blockEl) {
       blockEl.removeAttribute("data-freeze");
@@ -1950,21 +1861,8 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    */
   showSaveIndicator(targetEl, success) {
     const toast = document.createElement("div");
+    toast.className = success ? "embedded-note-toast" : "embedded-note-toast error";
     toast.textContent = success ? "\u2705 \u5DF2\u4FDD\u5B58" : "\u274C \u4FDD\u5B58\u5931\u8D25";
-    toast.style.cssText = `
-			position: absolute;
-			top: 6px;
-			right: 10px;
-			background: var(--background-secondary);
-			color: ${success ? "var(--text-success)" : "var(--text-error)"};
-			border: 1px solid var(--background-modifier-border);
-			border-radius: 4px;
-			padding: 2px 6px;
-			font-size: 12px;
-			opacity: 0.95;
-			pointer-events: none;
-			z-index: 2;
-		`;
     const host = targetEl.parentElement || targetEl;
     host.style.position = host.style.position || "relative";
     host.appendChild(toast);
@@ -2056,18 +1954,11 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 还原 Obsidian 原版样式
    */
   restoreOriginalObsidianStyles(block) {
-    block.style.cssText = "";
+    // 移除直接样式设置
     block.classList.remove("embedded-note-collapsed");
     const content = this.getEmbedContent(block);
     if (content) {
-      content.style.cssText = "";
-      content.style.visibility = "visible";
-      content.style.height = "auto";
-      content.style.overflow = "visible";
-      content.style.display = "";
-      content.style.paddingLeft = "";
-      content.style.paddingRight = "";
-      content.style.boxSizing = "";
+      // 移除直接样式设置
     }
     const titleBar = block.querySelector(".embedded-note-title-bar");
     if (titleBar) {
@@ -2138,7 +2029,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       block.removeAttribute("tabindex");
       block.removeAttribute("data-original-html");
       block.classList.remove("embedded-note-collapsed");
-      block.style.cssText = "";
+      // 移除直接样式设置
       if (block.tagName.toLowerCase() === "span" && block.classList.contains("internal-embed")) {
         block.style.display = "inline";
       }
@@ -2231,10 +2122,7 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     const collapseIcon = document.createElement("span");
     collapseIcon.className = "embedded-note-collapse-icon";
     collapseIcon.textContent = "\u25BC";
-    collapseIcon.style.fontSize = "12px";
-    collapseIcon.style.transition = "transform 0.2s ease";
-    collapseIcon.style.display = "inline-block";
-    collapseIcon.style.marginLeft = "8px";
+    // 移除直接样式设置，使用CSS类
     return collapseIcon;
   }
   /**
@@ -2244,16 +2132,7 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     const editBtn = document.createElement("button");
     editBtn.className = "embedded-note-edit-btn";
     editBtn.textContent = "\u7F16\u8F91";
-    editBtn.style.marginLeft = "8px";
-    editBtn.style.fontSize = "12px";
-    editBtn.style.padding = "2px 6px";
-    editBtn.style.border = "1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
-    editBtn.style.borderRadius = "4px";
-    editBtn.style.background = "var(--background-primary)";
-    editBtn.style.color = "var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
-    editBtn.style.display = "inline-block";
-    editBtn.style.cursor = "pointer";
-    editBtn.style.transition = "all 0.2s ease";
+    // 移除直接样式设置，使用CSS类
     const onEditClick = (e) => {
       e.stopPropagation();
       const blockId = titleBar.getAttribute("data-block-id");
@@ -2271,16 +2150,7 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     const jumpBtn = document.createElement("button");
     jumpBtn.className = "embedded-note-jump-btn";
     jumpBtn.textContent = "\u8DF3\u8F6C";
-    jumpBtn.style.marginLeft = "8px";
-    jumpBtn.style.fontSize = "12px";
-    jumpBtn.style.padding = "2px 6px";
-    jumpBtn.style.border = "1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
-    jumpBtn.style.borderRadius = "4px";
-    jumpBtn.style.background = "var(--background-primary)";
-    jumpBtn.style.color = "var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))";
-    jumpBtn.style.display = "inline-block";
-    jumpBtn.style.cursor = "pointer";
-    jumpBtn.style.transition = "all 0.2s ease";
+    // 移除直接样式设置，使用CSS类
     const onJumpClick = (e) => {
       var _a;
       e.stopPropagation();

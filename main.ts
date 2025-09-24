@@ -38,17 +38,17 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	private debugVerbose: boolean = false;
 	
 	// 简化日志方法
-	private log(message: string, ...args: any[]) {
+	private log(message: string, ...args: unknown[]) {
 		if (this.settings?.debugMode || this.debugVerbose) {
 			console.log(`[EmbeddedNoteEnhancer] ${message}`, ...args);
 		}
 	}
 	
-	private warn(message: string, ...args: any[]) {
+	private warn(message: string, ...args: unknown[]) {
 		console.warn(`[EmbeddedNoteEnhancer] ${message}`, ...args);
 	}
 	
-	private error(message: string, ...args: any[]) {
+	private error(message: string, ...args: unknown[]) {
 		console.error(`[EmbeddedNoteEnhancer] ${message}`, ...args);
 	}
 	// 日志去抖：同一 key 在 ttl 内只打印一次
@@ -83,7 +83,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	) {
 		try {
 			// @ts-ignore - EventTarget in DOM supports addEventListener
-			el.addEventListener(type as any, handler as any, options as any);
+			el.addEventListener(type, handler, options);
 			this.trackedEvents.push({ el, type, handler, options });
 		} catch {}
 	}
@@ -92,7 +92,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	private removeTrackedEventListenersForRoot(root: HTMLElement) {
 		const remaining: typeof this.trackedEvents = [];
 		this.trackedEvents.forEach((rec) => {
-			const target = rec.el as any;
+			const target = rec.el;
 			const isNode = target && typeof target === 'object' && 'addEventListener' in target;
 			let shouldRemove = false;
 			if (isNode) {
@@ -105,7 +105,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			if (shouldRemove) {
 				try {
 					// @ts-ignore
-					target.removeEventListener(rec.type as any, rec.handler as any, rec.options as any);
+					target.removeEventListener(rec.type, rec.handler, rec.options);
 				} catch {}
 			} else {
 				remaining.push(rec);
@@ -119,13 +119,13 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		this.trackedEvents.forEach((rec) => {
 			try {
 				// @ts-ignore
-				(rec.el as any).removeEventListener(rec.type as any, rec.handler as any, rec.options as any);
+				rec.el.removeEventListener(rec.type, rec.handler, rec.options);
 			} catch {}
 		});
 		this.trackedEvents = [];
 	}
 
-	private logOnce(key: string, message: string, ...args: any[]) {
+	private logOnce(key: string, message: string, ...args: unknown[]) {
 		const now = Date.now();
 		const last = this.lastLogTimes.get(key) || 0;
 		const ttl = 2000; // 增加到2秒，减少重复
@@ -366,27 +366,8 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		}
 		
 		const level = this.calculateNestLevel(block);
-		// 外框间距：左 7px/层，右 14px/层，上下 0px（避免多余空白）
-		block.style.setProperty('margin-left', `${level * 7}px`, 'important');
-		block.style.setProperty('margin-right', `${level * 14}px`, 'important');
-		block.style.setProperty('margin-top', '0px', 'important');
-		block.style.setProperty('margin-bottom', '0px', 'important');
-		block.style.setProperty('display', 'block', 'important');
-		block.style.setProperty('box-sizing', 'border-box', 'important');
+		// 移除直接样式设置，使用CSS类
 		block.setAttribute('data-nest-level', String(level));
-		// 内容文字内边距：左右各 14px
-		const content = this.getEmbedContent(block) as HTMLElement | null;
-		if (content) {
-			content.style.setProperty('padding-left', '14px', 'important');
-			content.style.setProperty('padding-right', '14px', 'important');
-			content.style.setProperty('box-sizing', 'border-box', 'important');
-		}
-		// 标题栏满宽、边框一致
-		const titleBar = block.querySelector('.embedded-note-title-bar') as HTMLElement | null;
-		if (titleBar) {
-			titleBar.style.setProperty('width', '100%', 'important');
-			titleBar.style.setProperty('box-sizing', 'border-box', 'important');
-		}
 	}
 
 	onunload() {
@@ -1086,11 +1067,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		all.forEach((block) => {
 			const level = this.calculateNestLevel(block as HTMLElement);
 			(block as HTMLElement).setAttribute('data-nest-level', String(level));
-			// 重新同步外边距，并加上 important，覆盖主题
-			(block as HTMLElement).style.setProperty('margin-left', `${level * 7}px`, 'important');
-			(block as HTMLElement).style.setProperty('margin-right', `${level * 14}px`, 'important');
-			(block as HTMLElement).style.setProperty('margin-top', '0px', 'important');
-			(block as HTMLElement).style.setProperty('margin-bottom', '0px', 'important');
+			// 移除直接样式设置，使用CSS类
 			// 确保统一样式应用
 			this.applyUnifiedBlockStyles(block as HTMLElement);
 		});
@@ -1355,8 +1332,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			} else {
 				block.insertBefore(titleBar, block.firstChild);
 			}
-			// 关键：将增强后的 span 也转为块级显示，避免标题栏不占行导致"只有一条线"
-			(block as HTMLElement).style.display = 'block';
+			// 移除直接样式设置，使用CSS类
 			block.setAttribute('data-embedded-note-enhanced', 'true');
 		} else {
 			block.insertBefore(titleBar, block.firstChild);
@@ -1368,11 +1344,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		block.setAttribute('data-file-link', fileName);
 		block.setAttribute('data-embedded-note-enhanced', 'true');
 		block.setAttribute('data-nest-level', nestLevel.toString());
-		// 冷启动也强制设置外边距，避免主题覆盖
-		(block as HTMLElement).style.setProperty('margin-left', `${nestLevel * 7}px`, 'important');
-		(block as HTMLElement).style.setProperty('margin-right', `${nestLevel * 14}px`, 'important');
-		(block as HTMLElement).style.setProperty('margin-top', '0px', 'important');
-		(block as HTMLElement).style.setProperty('margin-bottom', '0px', 'important');
+		// 移除直接样式设置，使用CSS类
 		// 确保初始状态为非编辑状态
 		block.setAttribute('data-editing', 'false');
 
@@ -1385,7 +1357,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				e.stopPropagation();
 			}
 		};
-		this.addTrackedEventListener(block, 'keydown', keydownHandler as any, true);
+		this.addTrackedEventListener(block, 'keydown', keydownHandler as EventListener, true);
 
 		// 防止点击默认的"打开嵌入源文件"图标导致新面板/窗口被打开
 		// 仅对已经增强过的嵌入块生效
@@ -1404,7 +1376,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		// 同时兜底拦截内部的 <a> 链接点击
 		block.querySelectorAll('.markdown-embed-link, a.internal-link, a[href]')
 			.forEach((el) => {
-				this.addTrackedEventListener(el as HTMLElement, 'click', stopOpen as any, true);
+				this.addTrackedEventListener(el as HTMLElement, 'click', stopOpen, true);
 			});
 		
 		// 存储引用
@@ -1445,68 +1417,35 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		titleBar.className = 'embedded-note-title-bar';
 		titleBar.setAttribute('data-block-id', blockId);
 		
-		// 设置样式 - 使用Obsidian主题变量，字体颜色使用主题强调色
-		titleBar.style.cssText = `
-			background-color: var(--background-secondary);
-			color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
-			font-size: ${this.settings.fontSize};
-			padding: 8px 12px;
-			border-bottom: 1px solid var(--background-modifier-border);
-			cursor: pointer;
-			user-select: none;
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			transition: background-color 0.2s ease;
-		`;
+		// 移除直接样式设置，使用CSS类
+		titleBar.style.fontSize = this.settings.fontSize;
 
 		// 移除嵌套层级指示器，改为通过缩进和边框来区分层级
 
 		// 创建标题文本
 		const titleText = document.createElement('span');
 		titleText.textContent = fileName;
-		titleText.style.flex = '1';
-		titleText.style.fontWeight = '500';
-		titleText.style.marginLeft = nestLevel > 0 ? '4px' : '0px';
+		titleText.className = 'embedded-note-title-text';
+		if (nestLevel > 0) {
+			titleText.classList.add('nested');
+		}
 
 		// 创建折叠图标
 		const collapseIcon = document.createElement('span');
 		collapseIcon.className = 'embedded-note-collapse-icon';
 		collapseIcon.textContent = '▼';
-		collapseIcon.style.fontSize = '12px';
-		collapseIcon.style.transition = 'transform 0.2s ease';
-		collapseIcon.style.display = 'inline-block';
-		collapseIcon.style.marginLeft = '8px';
 
 		// 创建编辑切换按钮
 		const editBtn = document.createElement('button');
 		editBtn.className = 'embedded-note-edit-btn';
 		editBtn.textContent = '编辑';
-		editBtn.style.marginLeft = '8px';
-		editBtn.style.fontSize = '12px';
-		editBtn.style.padding = '2px 6px';
-		editBtn.style.border = '1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
-		editBtn.style.borderRadius = '4px';
-		editBtn.style.background = 'var(--background-primary)';
-		editBtn.style.color = 'var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
 		editBtn.style.display = this.settings.showEditButton ? 'inline-block' : 'none';
-		editBtn.style.cursor = 'pointer';
-		editBtn.style.transition = 'all 0.2s ease';
 
 		// 创建跳转按钮
 		const jumpBtn = document.createElement('button');
 		jumpBtn.className = 'embedded-note-jump-btn';
 		jumpBtn.textContent = '跳转';
-		jumpBtn.style.marginLeft = '8px';
-		jumpBtn.style.fontSize = '12px';
-		jumpBtn.style.padding = '2px 6px';
-		jumpBtn.style.border = '1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
-		jumpBtn.style.borderRadius = '4px';
-		jumpBtn.style.background = 'var(--background-primary)';
-		jumpBtn.style.color = 'var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
 		jumpBtn.style.display = this.settings.showJumpButton ? 'inline-block' : 'none';
-		jumpBtn.style.cursor = 'pointer';
-		jumpBtn.style.transition = 'all 0.2s ease';
 
 		titleBar.appendChild(titleText);
 		// 非编辑状态且设置开启时才显示折叠图标
@@ -1520,11 +1459,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			titleBar.appendChild(jumpBtn);
 		}
 
-		// 添加悬停效果
-		const onMouseEnter = () => { titleBar.style.backgroundColor = 'var(--background-modifier-hover)'; };
-		const onMouseLeave = () => { titleBar.style.backgroundColor = 'var(--background-secondary)'; };
-		this.addTrackedEventListener(titleBar, 'mouseenter', onMouseEnter as any);
-		this.addTrackedEventListener(titleBar, 'mouseleave', onMouseLeave as any);
+		// 移除鼠标事件处理，使用CSS hover效果
 
 		// 添加点击事件
 		const onTitleClick = (e: MouseEvent) => {
@@ -1536,7 +1471,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			if (block && block.getAttribute('data-editing') === 'true') return;
 			this.toggleBlockCollapse(blockId);
 		};
-		this.addTrackedEventListener(titleBar, 'click', onTitleClick as any);
+		this.addTrackedEventListener(titleBar, 'click', onTitleClick as EventListener);
 
 		// 编辑按钮切换原地编辑
 		const onEditClick = (e: MouseEvent) => {
@@ -1567,10 +1502,6 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 						const newIcon = document.createElement('span');
 						newIcon.className = 'embedded-note-collapse-icon';
 						newIcon.textContent = '▼';
-						newIcon.style.fontSize = '12px';
-						newIcon.style.transition = 'transform 0.2s ease';
-						newIcon.style.display = 'inline-block';
-						newIcon.style.marginLeft = '8px';
 						titleBar.appendChild(newIcon);
 					}
 				}
@@ -1600,14 +1531,14 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				}
 			}
 		};
-		this.addTrackedEventListener(editBtn, 'click', onEditClick as any);
+		this.addTrackedEventListener(editBtn, 'click', onEditClick as EventListener);
 
 		// 跳转按钮点击事件
 		const onJumpClick = (e: MouseEvent) => {
 			e.stopPropagation();
 			this.jumpToFile(fileName);
 		};
-		this.addTrackedEventListener(jumpBtn, 'click', onJumpClick as any);
+		this.addTrackedEventListener(jumpBtn, 'click', onJumpClick as EventListener);
 
 		return titleBar;
 	}
@@ -1686,38 +1617,24 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		const blockId = block.getAttribute('data-block-id');
 		if (!blockId) return;
 
-		const titleBar = block.querySelector('.embedded-note-title-bar') as HTMLElement;
-		const collapseIcon = titleBar?.querySelector('.embedded-note-collapse-icon') as HTMLElement;
+		// 移除未使用的变量
+		// 移除未使用的变量
 		const embedContent = this.getEmbedContent(block) as HTMLElement;
 
 		if (collapsed) {
 			// Mark container as collapsed so CSS can hide everything except the title bar
 			block.classList.add('embedded-note-collapsed');
 			if (embedContent) {
-				// 使用 visibility 而不是 display 来保持嵌套嵌入的布局
-				embedContent.style.visibility = 'hidden';
-				embedContent.style.height = '0';
-				embedContent.style.overflow = 'hidden';
 				// 禁用编辑模式
 				this.disableInlineEditing(embedContent);
-			}
-			if (collapseIcon) {
-				collapseIcon.style.transform = 'rotate(-90deg)';
 			}
 		} else {
 			block.classList.remove('embedded-note-collapsed');
 			if (embedContent) {
-				// 恢复显示
-				embedContent.style.visibility = 'visible';
-				embedContent.style.height = '';
-				embedContent.style.overflow = '';
                 // 仅当该块处于编辑状态时才启用编辑模式
                 if (block.getAttribute('data-editing') === 'true') {
-					this.enableInlineEditing(block);
-				}
-			}
-			if (collapseIcon) {
-				collapseIcon.style.transform = 'rotate(0deg)';
+                    this.enableInlineEditing(block);
+                }
 			}
 		}
 
@@ -1766,12 +1683,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			editor.oninput = null;
 		}
 
-		// 确保恢复后也移除编辑样式痕迹
-		embedContent.style.position = '';
-		embedContent.style.border = '';
-		embedContent.style.borderRadius = '';
-		embedContent.style.padding = '';
-		embedContent.style.backgroundColor = '';
+		// 移除直接样式设置
 		
 		// 移除编辑指示器
 		const indicator = embedContent.querySelector('.embedded-note-edit-indicator');
@@ -1779,13 +1691,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			indicator.remove();
 		}
 
-        // 移除编辑样式，并解除冻结
-		embedContent.style.position = '';
-		embedContent.style.border = '';
-		embedContent.style.borderRadius = '';
-		embedContent.style.padding = '';
-		embedContent.style.backgroundColor = '';
-		embedContent.style.display = 'block';
+        // 移除直接样式设置
         const blockEl = embedContent.closest('.markdown-embed, .internal-embed') as HTMLElement | null;
         if (blockEl) {
             blockEl.removeAttribute('data-freeze');
@@ -2311,13 +2217,13 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	private isolateEditorEvents(editor: HTMLTextAreaElement) {
 		const stop = (e: Event) => {
 			e.stopPropagation();
-			(e as any).stopImmediatePropagation?.();
+			(e as Event).stopImmediatePropagation?.();
 			// @ts-ignore
 			e.cancelBubble = true;
 		};
 		['keydown','keypress','keyup','mousedown','click','dblclick','wheel','focus','focusin'].forEach((type) => {
-			editor.addEventListener(type as any, stop, true);
-			editor.addEventListener(type as any, stop, false);
+			editor.addEventListener(type, stop, true);
+			editor.addEventListener(type, stop, false);
 		});
 
 		// 特殊处理：在少数主题/插件下，数字键可能仍被全局处理
@@ -2326,7 +2232,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			if (!e.ctrlKey && !e.metaKey && !e.altKey) {
 				// 阻断传播，保留默认，从而让 textarea 正常输入
 				e.stopPropagation();
-				(e as any).stopImmediatePropagation?.();
+				(e as Event).stopImmediatePropagation?.();
 			}
 		}, true);
 	}
@@ -2416,20 +2322,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		// 临时浮层提示，不向 DOM 写入持久元素
 		const toast = document.createElement('div');
 		toast.textContent = success ? '✅ 已保存' : '❌ 保存失败';
-		toast.style.cssText = `
-			position: absolute;
-			top: 6px;
-			right: 10px;
-			background: var(--background-secondary);
-			color: ${success ? 'var(--text-success)' : 'var(--text-error)'};
-			border: 1px solid var(--background-modifier-border);
-			border-radius: 4px;
-			padding: 2px 6px;
-			font-size: 12px;
-			opacity: 0.95;
-			pointer-events: none;
-			z-index: 2;
-		`;
+		toast.className = success ? 'embedded-note-toast' : 'embedded-note-toast error';
 		const host = targetEl.parentElement || targetEl;
 		host.style.position = host.style.position || 'relative';
 		host.appendChild(toast);
@@ -2552,8 +2445,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	 * 还原 Obsidian 原版样式
 	 */
 	private restoreOriginalObsidianStyles(block: HTMLElement) {
-		// 完全重置所有内联样式
-		block.style.cssText = '';
+		// 移除直接样式设置
 		
 		// 移除所有我们添加的类名
 		block.classList.remove('embedded-note-collapsed');
@@ -2561,17 +2453,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		// 还原内容区域的样式
 		const content = this.getEmbedContent(block) as HTMLElement | null;
 		if (content) {
-			// 完全重置内容区域样式
-			content.style.cssText = '';
-			
-			// 确保内容区域完全可见
-			content.style.visibility = 'visible';
-			content.style.height = 'auto';
-			content.style.overflow = 'visible';
-			content.style.display = '';
-			content.style.paddingLeft = '';
-			content.style.paddingRight = '';
-			content.style.boxSizing = '';
+			// 移除直接样式设置
 		}
 
 		// 移除标题栏（如果还存在）
@@ -2600,10 +2482,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			original.remove();
 		}
 
-		// 对于span.internal-embed，确保恢复为inline显示
-		if (block.tagName.toLowerCase() === 'span' && block.classList.contains('internal-embed')) {
-			block.style.display = 'inline';
-		}
+		// 移除直接样式设置
 
 		// 移除所有我们添加的属性
 		block.removeAttribute('data-embedded-note-enhanced');
@@ -2673,13 +2552,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			// 移除插件添加的类名
 			block.classList.remove('embedded-note-collapsed');
 			
-			// 重置样式
-			block.style.cssText = '';
-			
-			// 对于span.internal-embed，确保恢复为inline显示
-			if (block.tagName.toLowerCase() === 'span' && block.classList.contains('internal-embed')) {
-				block.style.display = 'inline';
-			}
+			// 移除直接样式设置
 		});
 
 		// 清理内存引用
@@ -2873,10 +2746,7 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 		const collapseIcon = document.createElement('span');
 		collapseIcon.className = 'embedded-note-collapse-icon';
 		collapseIcon.textContent = '▼';
-		collapseIcon.style.fontSize = '12px';
-		collapseIcon.style.transition = 'transform 0.2s ease';
-		collapseIcon.style.display = 'inline-block';
-		collapseIcon.style.marginLeft = '8px';
+		// 移除直接样式设置，使用CSS类
 		return collapseIcon;
 	}
 
@@ -2887,16 +2757,7 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 		const editBtn = document.createElement('button');
 		editBtn.className = 'embedded-note-edit-btn';
 		editBtn.textContent = '编辑';
-		editBtn.style.marginLeft = '8px';
-		editBtn.style.fontSize = '12px';
-		editBtn.style.padding = '2px 6px';
-		editBtn.style.border = '1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
-		editBtn.style.borderRadius = '4px';
-		editBtn.style.background = 'var(--background-primary)';
-		editBtn.style.color = 'var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
-		editBtn.style.display = 'inline-block';
-		editBtn.style.cursor = 'pointer';
-		editBtn.style.transition = 'all 0.2s ease';
+		// 移除直接样式设置，使用CSS类
 
 		// 添加编辑按钮事件处理 - 使用插件的方法
 		const onEditClick = (e: MouseEvent) => {
@@ -2919,16 +2780,7 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 		const jumpBtn = document.createElement('button');
 		jumpBtn.className = 'embedded-note-jump-btn';
 		jumpBtn.textContent = '跳转';
-		jumpBtn.style.marginLeft = '8px';
-		jumpBtn.style.fontSize = '12px';
-		jumpBtn.style.padding = '2px 6px';
-		jumpBtn.style.border = '1px solid var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
-		jumpBtn.style.borderRadius = '4px';
-		jumpBtn.style.background = 'var(--background-primary)';
-		jumpBtn.style.color = 'var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)))';
-		jumpBtn.style.display = 'inline-block';
-		jumpBtn.style.cursor = 'pointer';
-		jumpBtn.style.transition = 'all 0.2s ease';
+		// 移除直接样式设置，使用CSS类
 
 		// 添加跳转按钮事件处理
 		const onJumpClick = (e: MouseEvent) => {
