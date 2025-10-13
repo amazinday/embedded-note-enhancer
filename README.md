@@ -31,10 +31,9 @@
 
 #### 方式二：手动安装
 1. 下载 [最新版本](https://github.com/amazinday/embedded-note-enhancer/releases/latest)
-2. 解压下载的 `embedded-note-enhancer-1.0.0.zip` 文件
-3. 将 `main.js`、`manifest.json` 和 `styles.css` 复制到你的 vault 的 `.obsidian/plugins/embedded-note-enhancer/` 文件夹中
-4. 重新加载 Obsidian
-5. 在设置 → 第三方插件中启用 "Embedded Note Enhancer"
+2. 将 `main.js`、`manifest.json` 和 `styles.css` 复制到你的 vault 的 `.obsidian/plugins/embedded-note-enhancer/` 文件夹中
+3. 重新加载 Obsidian
+4. 在设置 → 第三方插件中启用 "Embedded Note Enhancer"
 
 ### 📦 下载链接
 
