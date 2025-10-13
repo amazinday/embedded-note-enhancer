@@ -310,6 +310,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       this.log(`Skipping style application for image embed`);
       return;
     }
+    if (this.isPdfEmbed(block)) {
+      this.log(`Skipping style application for PDF embed`);
+      return;
+    }
     const level = this.calculateNestLevel(block);
     block.setAttribute("data-nest-level", String(level));
   }
@@ -789,6 +793,11 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
           console.log(`[EmbeddedNoteEnhancer] Skipping image embed in main processing:`, block);
         return;
       }
+      if (this.isPdfEmbed(block)) {
+        if (this.debugVerbose)
+          console.log(`[EmbeddedNoteEnhancer] Skipping PDF embed in main processing:`, block);
+        return;
+      }
       this.processEmbeddedBlock(block);
       this.applyUnifiedBlockStyles(block);
     });
@@ -833,6 +842,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         this.log(`Skipping nested image embed`);
         return;
       }
+      if (this.isPdfEmbed(embedBlock)) {
+        this.log(`Skipping nested PDF embed`);
+        return;
+      }
       if (!embedBlock.hasAttribute("data-title-bar-added")) {
         this.log(`Processing nested embed: ${embedBlock.className}`);
         this.processEmbeddedBlock(embedBlock);
@@ -873,6 +886,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
           this.log(`Skipping comprehensive processing of image embed`);
           return;
         }
+        if (this.isPdfEmbed(embedBlock)) {
+          this.log(`Skipping comprehensive processing of PDF embed`);
+          return;
+        }
         try {
           this.processEmbeddedBlock(embedBlock);
         } catch (error) {
@@ -892,7 +909,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     all.forEach((block) => {
       const level = this.calculateNestLevel(block);
       block.setAttribute("data-nest-level", String(level));
-      // 移除直接样式设置，使用CSS类
       this.applyUnifiedBlockStyles(block);
     });
   }
@@ -944,6 +960,11 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (this.isImageEmbed(block)) {
       if (this.debugVerbose)
         console.log(`[EmbeddedNoteEnhancer] Skipping image embed, using native Obsidian behavior:`, block);
+      return;
+    }
+    if (this.isPdfEmbed(block)) {
+      if (this.debugVerbose)
+        console.log(`[EmbeddedNoteEnhancer] Skipping PDF embed, using native Obsidian behavior:`, block);
       return;
     }
     if (block.tagName.toLowerCase() !== "div" && block.tagName.toLowerCase() !== "span") {
@@ -1088,7 +1109,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       } else {
         block.insertBefore(titleBar, block.firstChild);
       }
-      // 移除直接样式设置，使用CSS类
       block.setAttribute("data-embedded-note-enhanced", "true");
     } else {
       block.insertBefore(titleBar, block.firstChild);
@@ -1098,7 +1118,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     block.setAttribute("data-file-link", fileName);
     block.setAttribute("data-embedded-note-enhanced", "true");
     block.setAttribute("data-nest-level", nestLevel.toString());
-    // 移除直接样式设置，使用CSS类
     block.setAttribute("data-editing", "false");
     block.setAttribute("tabindex", "-1");
     const keydownHandler = (e) => {
@@ -1152,8 +1171,8 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     titleBar.setAttribute("data-block-id", blockId);
     titleBar.style.fontSize = this.settings.fontSize;
     const titleText = document.createElement("span");
-    titleText.className = "embedded-note-title-text";
     titleText.textContent = fileName;
+    titleText.className = "embedded-note-title-text";
     if (nestLevel > 0) {
       titleText.classList.add("nested");
     }
@@ -1178,7 +1197,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (this.settings.showJumpButton) {
       titleBar.appendChild(jumpBtn);
     }
-    // 移除鼠标事件处理，使用CSS hover效果
     const onTitleClick = (e) => {
       if (e.target.closest(".embedded-note-edit-btn") || e.target.closest(".embedded-note-jump-btn"))
         return;
@@ -1216,7 +1234,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
             const newIcon = document.createElement("span");
             newIcon.className = "embedded-note-collapse-icon";
             newIcon.textContent = "\u25BC";
-            // 移除直接样式设置，使用CSS类
             titleBar.appendChild(newIcon);
           }
         }
@@ -1312,8 +1329,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const blockId = block.getAttribute("data-block-id");
     if (!blockId)
       return;
-    const titleBar = block.querySelector(".embedded-note-title-bar");
-    const collapseIcon = titleBar == null ? void 0 : titleBar.querySelector(".embedded-note-collapse-icon");
     const embedContent = this.getEmbedContent(block);
     if (collapsed) {
       block.classList.add("embedded-note-collapsed");
@@ -1481,6 +1496,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         this.log(`Skipping reprocess of image embed`);
         return;
       }
+      if (this.isPdfEmbed(embedBlock)) {
+        this.log(`Skipping reprocess of PDF embed`);
+        return;
+      }
       if (!embedBlock.hasAttribute("data-title-bar-added")) {
         this.log(`Reprocessing unprocessed embed`);
         this.processEmbeddedBlock(embedBlock);
@@ -1588,6 +1607,13 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     return isImage;
   }
   /**
+   * 检查文件是否为PDF类型
+   */
+  isPdfFile(file) {
+    const extension = file.extension.toLowerCase();
+    return extension === "pdf";
+  }
+  /**
    * 检查嵌入块是否为图片嵌入
    */
   isImageEmbed(block) {
@@ -1659,6 +1685,49 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg", ".webp", ".tiff", ".ico"];
     const lowerPath = filePath.toLowerCase();
     return imageExtensions.some((ext) => lowerPath.endsWith(ext));
+  }
+  /**
+   * 检查嵌入块是否为PDF嵌入
+   */
+  isPdfEmbed(block) {
+    if (block.querySelector(".pdf-embed") || block.classList.contains("pdf-embed")) {
+      return true;
+    }
+    const fileLink = block.getAttribute("data-file-link");
+    if (fileLink && fileLink.toLowerCase().endsWith(".pdf")) {
+      return true;
+    }
+    const internalLink = block.querySelector("a.internal-link");
+    if (internalLink) {
+      const href = internalLink.getAttribute("href");
+      if (href && href.toLowerCase().endsWith(".pdf")) {
+        return true;
+      }
+    }
+    const embedLink = block.querySelector(".markdown-embed-link");
+    if (embedLink) {
+      const href = embedLink.getAttribute("href");
+      if (href && href.toLowerCase().endsWith(".pdf")) {
+        return true;
+      }
+    }
+    const activeFile = this.app.workspace.getActiveFile();
+    if (fileLink) {
+      const file = this.app.metadataCache.getFirstLinkpathDest(fileLink, (activeFile == null ? void 0 : activeFile.path) || "");
+      if (file && this.isPdfFile(file)) {
+        return true;
+      }
+    }
+    if (internalLink) {
+      const href = internalLink.getAttribute("href");
+      if (href) {
+        const file = this.app.metadataCache.getFirstLinkpathDest(href, (activeFile == null ? void 0 : activeFile.path) || "");
+        if (file && this.isPdfFile(file)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
   /**
    * 节流处理，防止短时间内重复处理
@@ -1861,8 +1930,8 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    */
   showSaveIndicator(targetEl, success) {
     const toast = document.createElement("div");
-    toast.className = success ? "embedded-note-toast" : "embedded-note-toast error";
     toast.textContent = success ? "\u2705 \u5DF2\u4FDD\u5B58" : "\u274C \u4FDD\u5B58\u5931\u8D25";
+    toast.className = success ? "embedded-note-toast" : "embedded-note-toast error";
     const host = targetEl.parentElement || targetEl;
     host.style.position = host.style.position || "relative";
     host.appendChild(toast);
@@ -1954,11 +2023,9 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 还原 Obsidian 原版样式
    */
   restoreOriginalObsidianStyles(block) {
-    // 移除直接样式设置
     block.classList.remove("embedded-note-collapsed");
     const content = this.getEmbedContent(block);
     if (content) {
-      // 移除直接样式设置
     }
     const titleBar = block.querySelector(".embedded-note-title-bar");
     if (titleBar) {
@@ -1977,9 +2044,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         }
       });
       original.remove();
-    }
-    if (block.tagName.toLowerCase() === "span" && block.classList.contains("internal-embed")) {
-      block.style.display = "inline";
     }
     block.removeAttribute("data-embedded-note-enhanced");
     block.removeAttribute("data-title-bar-added");
@@ -2029,10 +2093,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       block.removeAttribute("tabindex");
       block.removeAttribute("data-original-html");
       block.classList.remove("embedded-note-collapsed");
-      // 移除直接样式设置
-      if (block.tagName.toLowerCase() === "span" && block.classList.contains("internal-embed")) {
-        block.style.display = "inline";
-      }
     });
     this.embeddedBlocks.clear();
     this.collapseStates.clear();
@@ -2122,7 +2182,6 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     const collapseIcon = document.createElement("span");
     collapseIcon.className = "embedded-note-collapse-icon";
     collapseIcon.textContent = "\u25BC";
-    // 移除直接样式设置，使用CSS类
     return collapseIcon;
   }
   /**
@@ -2132,7 +2191,6 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     const editBtn = document.createElement("button");
     editBtn.className = "embedded-note-edit-btn";
     editBtn.textContent = "\u7F16\u8F91";
-    // 移除直接样式设置，使用CSS类
     const onEditClick = (e) => {
       e.stopPropagation();
       const blockId = titleBar.getAttribute("data-block-id");
@@ -2150,7 +2208,6 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     const jumpBtn = document.createElement("button");
     jumpBtn.className = "embedded-note-jump-btn";
     jumpBtn.textContent = "\u8DF3\u8F6C";
-    // 移除直接样式设置，使用CSS类
     const onJumpClick = (e) => {
       var _a;
       e.stopPropagation();

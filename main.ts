@@ -365,6 +365,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			return;
 		}
 		
+		// 检查是否为PDF嵌入，如果是则跳过样式应用
+		if (this.isPdfEmbed(block)) {
+			this.log(`Skipping style application for PDF embed`);
+			return;
+		}
+		
 		const level = this.calculateNestLevel(block);
 		// 移除直接样式设置，使用CSS类
 		block.setAttribute('data-nest-level', String(level));
@@ -910,6 +916,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				return;
 			}
 			
+			// 检查是否为PDF嵌入，如果是则跳过处理
+			if (this.isPdfEmbed(block)) {
+				if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping PDF embed in main processing:`, block);
+				return;
+			}
+			
 			this.processEmbeddedBlock(block);
 			// 冷启动/首轮渲染时强制统一样式
 			this.applyUnifiedBlockStyles(block);
@@ -976,6 +988,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				return;
 			}
 			
+			// 检查是否为PDF嵌入，如果是则跳过处理
+			if (this.isPdfEmbed(embedBlock as HTMLElement)) {
+				this.log(`Skipping nested PDF embed`);
+				return;
+			}
+			
 			// 只处理尚未处理的嵌入块
 			if (!embedBlock.hasAttribute('data-title-bar-added')) {
 			this.log(`Processing nested embed: ${embedBlock.className}`);
@@ -1032,6 +1050,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				// 检查是否为图片嵌入，如果是则跳过处理
 				if (this.isImageEmbed(embedBlock as HTMLElement)) {
 					this.log(`Skipping comprehensive processing of image embed`);
+					return;
+				}
+				
+				// 检查是否为PDF嵌入，如果是则跳过处理
+				if (this.isPdfEmbed(embedBlock as HTMLElement)) {
+					this.log(`Skipping comprehensive processing of PDF embed`);
 					return;
 				}
 				
@@ -1120,6 +1144,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		// 检查是否为图片嵌入，如果是则跳过处理，使用Obsidian原版方式
 		if (this.isImageEmbed(block)) {
 			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping image embed, using native Obsidian behavior:`, block);
+			return;
+		}
+
+		// 检查是否为PDF嵌入，如果是则跳过处理，使用Obsidian原版方式
+		if (this.isPdfEmbed(block)) {
+			if (this.debugVerbose) console.log(`[EmbeddedNoteEnhancer] Skipping PDF embed, using native Obsidian behavior:`, block);
 			return;
 		}
 
@@ -1850,6 +1880,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				return;
 			}
 			
+			// 检查是否为PDF嵌入，如果是则跳过处理
+			if (this.isPdfEmbed(embedBlock as HTMLElement)) {
+				this.log(`Skipping reprocess of PDF embed`);
+				return;
+			}
+			
 			// 检查是否已经处理过
 			if (!embedBlock.hasAttribute('data-title-bar-added')) {
 				this.log(`Reprocessing unprocessed embed`);
@@ -1988,6 +2024,14 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	}
 
 	/**
+	 * 检查文件是否为PDF类型
+	 */
+	private isPdfFile(file: TFile): boolean {
+		const extension = file.extension.toLowerCase();
+		return extension === 'pdf';
+	}
+
+	/**
 	 * 检查嵌入块是否为图片嵌入
 	 */
 	private isImageEmbed(block: HTMLElement): boolean {
@@ -2083,6 +2127,62 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp', '.tiff', '.ico'];
 		const lowerPath = filePath.toLowerCase();
 		return imageExtensions.some(ext => lowerPath.endsWith(ext));
+	}
+
+	/**
+	 * 检查嵌入块是否为PDF嵌入
+	 */
+	private isPdfEmbed(block: HTMLElement): boolean {
+		// 快速检查：查看DOM结构中是否有PDF相关元素
+		if (block.querySelector('.pdf-embed') || 
+			block.classList.contains('pdf-embed')) {
+			return true;
+		}
+
+		// 检查文件链接是否为PDF
+		const fileLink = block.getAttribute('data-file-link');
+		if (fileLink && fileLink.toLowerCase().endsWith('.pdf')) {
+			return true;
+		}
+
+		// 检查内部链接
+		const internalLink = block.querySelector('a.internal-link');
+		if (internalLink) {
+			const href = internalLink.getAttribute('href');
+			if (href && href.toLowerCase().endsWith('.pdf')) {
+				return true;
+			}
+		}
+
+		// 检查嵌入链接
+		const embedLink = block.querySelector('.markdown-embed-link');
+		if (embedLink) {
+			const href = embedLink.getAttribute('href');
+			if (href && href.toLowerCase().endsWith('.pdf')) {
+				return true;
+			}
+		}
+
+		// 通过文件解析检查
+		const activeFile = this.app.workspace.getActiveFile();
+		if (fileLink) {
+			const file = this.app.metadataCache.getFirstLinkpathDest(fileLink, activeFile?.path || '');
+			if (file && this.isPdfFile(file)) {
+				return true;
+			}
+		}
+
+		if (internalLink) {
+			const href = internalLink.getAttribute('href');
+			if (href) {
+				const file = this.app.metadataCache.getFirstLinkpathDest(href, activeFile?.path || '');
+				if (file && this.isPdfFile(file)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**
