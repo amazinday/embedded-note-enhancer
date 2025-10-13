@@ -39,7 +39,7 @@
 
 | 版本 | 发布日期 | 下载链接 | 说明 |
 |------|----------|----------|------|
-| 1.0.0 | 2024-09-23 | [📥 下载](https://github.com/amazinday/embedded-note-enhancer/releases/download/1.0.0/embedded-note-enhancer-1.0.0.zip) | 正式版发布 |
+| 1.0.0 | 2025-09-23 | [📥 下载](https://github.com/amazinday/embedded-note-enhancer/releases/download/1.0.0/embedded-note-enhancer-1.0.0.zip) | 正式版发布 |
 
 > 💡 **提示**: 如果没有看到社区插件市场选项，可以直接下载最新版本进行手动安装。
 
@@ -218,7 +218,7 @@ embedded-note-enhancer/
 
 ## 📈 更新日志
 
-### 1.0.0 (2024-09-23)
+### 1.0.0 (2025-09-23)
 - 🎉 正式版发布
 - 🎯 智能标题栏 - 为嵌入笔记添加可交互标题栏
 - 📁 折叠/展开功能 - 支持状态记忆
