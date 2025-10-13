@@ -39,7 +39,8 @@ var DEFAULT_SETTINGS = {
   manualSaveOnly: false,
   livePreviewEnabled: false,
   collapseStates: {},
-  debugMode: false
+  debugMode: false,
+  showPropertiesInEdit: true
 };
 var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   constructor() {
@@ -1524,6 +1525,72 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    */
   // 刷新逻辑已移除，依赖 Obsidian 自动更新嵌入内容
   /**
+   * 从文本中提取 frontmatter（YAML 属性）
+   */
+  extractFrontmatter(content) {
+    if (!content.trimStart().startsWith("---")) {
+      return null;
+    }
+    const lines = content.split("\n");
+    let endIndex = -1;
+    let startFound = false;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed === "---") {
+        if (!startFound) {
+          startFound = true;
+        } else {
+          endIndex = i;
+          break;
+        }
+      }
+    }
+    if (endIndex > 0) {
+      return lines.slice(0, endIndex + 1).join("\n");
+    }
+    return null;
+  }
+  /**
+   * 从文本中移除 frontmatter（YAML 属性）
+   */
+  removeFrontmatter(content) {
+    if (!content.trimStart().startsWith("---")) {
+      return content;
+    }
+    const lines = content.split("\n");
+    let endIndex = -1;
+    let startFound = false;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed === "---") {
+        if (!startFound) {
+          startFound = true;
+        } else {
+          endIndex = i;
+          break;
+        }
+      }
+    }
+    if (endIndex > 0) {
+      let contentAfterFrontmatter = lines.slice(endIndex + 1).join("\n");
+      contentAfterFrontmatter = contentAfterFrontmatter.replace(/^\n+/, "");
+      return contentAfterFrontmatter;
+    }
+    return content;
+  }
+  /**
+   * 自动调整 textarea 高度以适应内容
+   */
+  autoResizeTextarea(textarea) {
+    textarea.style.height = "auto";
+    const scrollHeight = textarea.scrollHeight;
+    const minHeight = 140;
+    const maxHeight = window.innerHeight * 0.6;
+    const finalHeight = Math.max(minHeight, Math.min(scrollHeight + 10, maxHeight));
+    textarea.style.height = `${finalHeight}px`;
+    this.log(`Auto-resized textarea: ${finalHeight}px (content: ${scrollHeight}px)`);
+  }
+  /**
    * 启用原地编辑功能
    */
   async enableInlineEditing(block) {
@@ -1556,7 +1623,11 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       editor.className = "embedded-note-editor";
       if (file) {
         try {
-          editor.value = await this.app.vault.read(file);
+          let content = await this.app.vault.read(file);
+          if (!this.settings.showPropertiesInEdit) {
+            content = this.removeFrontmatter(content);
+          }
+          editor.value = content;
         } catch (e) {
           editor.value = embedContent.textContent || "";
         }
@@ -1564,6 +1635,9 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         editor.value = embedContent.textContent || "";
       }
       embedContent.appendChild(editor);
+      setTimeout(() => {
+        this.autoResizeTextarea(editor);
+      }, 0);
     }
     block.setAttribute("data-freeze", "true");
     if (this.debugVerbose)
@@ -1910,7 +1984,14 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         return;
       }
       this.editingFiles.add(file.path);
-      const newContent = editor.value;
+      let newContent = editor.value;
+      if (!this.settings.showPropertiesInEdit) {
+        const originalContent = await this.app.vault.read(file);
+        const frontmatter = this.extractFrontmatter(originalContent);
+        if (frontmatter) {
+          newContent = frontmatter + "\n" + newContent;
+        }
+      }
       await this.app.vault.modify(file, newContent);
       this.showSaveIndicator(editor, true);
       setTimeout(() => {
@@ -2168,6 +2249,10 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
     }));
     new import_obsidian.Setting(containerEl).setName("\u4EC5\u624B\u52A8\u4FDD\u5B58").setDesc("\u5173\u95ED\u81EA\u52A8\u4FDD\u5B58\uFF0C\u4EC5\u5728 Ctrl+S \u6216\u70B9\u51FB\u5B8C\u6210\u65F6\u4FDD\u5B58").addToggle((toggle) => toggle.setValue(this.plugin.settings.manualSaveOnly).onChange(async (value) => {
       this.plugin.settings.manualSaveOnly = value;
+      await this.plugin.saveSettings();
+    }));
+    new import_obsidian.Setting(containerEl).setName("\u7F16\u8F91\u65F6\u663E\u793A\u5C5E\u6027").setDesc("\u5728\u7F16\u8F91\u6A21\u5F0F\u4E0B\u663E\u793A\u6587\u4EF6\u7684 frontmatter \u5C5E\u6027\uFF08YAML\uFF09\u3002\u5173\u95ED\u540E\uFF0C\u7F16\u8F91\u65F6\u5C06\u4E0D\u663E\u793A\u5C5E\u6027\uFF0C\u4F46\u4FDD\u5B58\u65F6\u4F1A\u81EA\u52A8\u4FDD\u7559\u539F\u6587\u4EF6\u7684\u5C5E\u6027").addToggle((toggle) => toggle.setValue(this.plugin.settings.showPropertiesInEdit).onChange(async (value) => {
+      this.plugin.settings.showPropertiesInEdit = value;
       await this.plugin.saveSettings();
     }));
     new import_obsidian.Setting(containerEl).setName("\u8C03\u8BD5\u6A21\u5F0F").setDesc("\u5F00\u542F\u540E\u4F1A\u5728\u63A7\u5236\u53F0\u8F93\u51FA\u8BE6\u7EC6\u7684\u8C03\u8BD5\u4FE1\u606F\uFF0C\u7528\u4E8E\u95EE\u9898\u6392\u67E5").addToggle((toggle) => toggle.setValue(this.plugin.settings.debugMode).onChange(async (value) => {

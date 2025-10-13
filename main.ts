@@ -11,6 +11,7 @@ interface EmbeddedNoteEnhancerSettings {
 	livePreviewEnabled: boolean;
 	collapseStates: Record<string, boolean>;
 	debugMode: boolean;
+	showPropertiesInEdit: boolean;
 }
 
 const DEFAULT_SETTINGS: EmbeddedNoteEnhancerSettings = {
@@ -23,7 +24,8 @@ const DEFAULT_SETTINGS: EmbeddedNoteEnhancerSettings = {
 	manualSaveOnly: false,
 	livePreviewEnabled: false,
 	collapseStates: {},
-	debugMode: false
+	debugMode: false,
+	showPropertiesInEdit: true
 };
 
 export default class EmbeddedNoteEnhancerPlugin extends Plugin {
@@ -1920,6 +1922,101 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 // 刷新逻辑已移除，依赖 Obsidian 自动更新嵌入内容
 
 	/**
+	 * 从文本中提取 frontmatter（YAML 属性）
+	 */
+	private extractFrontmatter(content: string): string | null {
+		// 检查是否以 --- 开头（frontmatter 标记）
+		if (!content.trimStart().startsWith('---')) {
+			return null;
+		}
+		
+		// 查找第二个 --- 的位置
+		const lines = content.split('\n');
+		let endIndex = -1;
+		let startFound = false;
+		
+		for (let i = 0; i < lines.length; i++) {
+			const trimmed = lines[i].trim();
+			if (trimmed === '---') {
+				if (!startFound) {
+					startFound = true;
+				} else {
+					endIndex = i;
+					break;
+				}
+			}
+		}
+		
+		// 如果找到了完整的 frontmatter，返回它
+		if (endIndex > 0) {
+			return lines.slice(0, endIndex + 1).join('\n');
+		}
+		
+		return null;
+	}
+
+	/**
+	 * 从文本中移除 frontmatter（YAML 属性）
+	 */
+	private removeFrontmatter(content: string): string {
+		// 检查是否以 --- 开头（frontmatter 标记）
+		if (!content.trimStart().startsWith('---')) {
+			return content;
+		}
+		
+		// 查找第二个 --- 的位置
+		const lines = content.split('\n');
+		let endIndex = -1;
+		let startFound = false;
+		
+		for (let i = 0; i < lines.length; i++) {
+			const trimmed = lines[i].trim();
+			if (trimmed === '---') {
+				if (!startFound) {
+					startFound = true;
+				} else {
+					endIndex = i;
+					break;
+				}
+			}
+		}
+		
+		// 如果找到了完整的 frontmatter，移除它
+		if (endIndex > 0) {
+			// 移除 frontmatter 和后面的空行
+			let contentAfterFrontmatter = lines.slice(endIndex + 1).join('\n');
+			// 移除开头的空行
+			contentAfterFrontmatter = contentAfterFrontmatter.replace(/^\n+/, '');
+			return contentAfterFrontmatter;
+		}
+		
+		return content;
+	}
+
+	/**
+	 * 自动调整 textarea 高度以适应内容
+	 */
+	private autoResizeTextarea(textarea: HTMLTextAreaElement) {
+		// 临时设置高度为auto来获取scrollHeight
+		textarea.style.height = 'auto';
+		
+		// 计算需要的高度（内容高度 + 一些padding）
+		const scrollHeight = textarea.scrollHeight;
+		
+		// 设置最小高度为140px（与CSS中的min-height一致）
+		const minHeight = 140;
+		// 设置最大高度为视口高度的60%，避免过高
+		const maxHeight = window.innerHeight * 0.6;
+		
+		// 计算最终高度
+		const finalHeight = Math.max(minHeight, Math.min(scrollHeight + 10, maxHeight));
+		
+		textarea.style.height = `${finalHeight}px`;
+		
+		this.log(`Auto-resized textarea: ${finalHeight}px (content: ${scrollHeight}px)`);
+	}
+
+	/**
 	 * 启用原地编辑功能
 	 */
     public async enableInlineEditing(block: HTMLElement) {
@@ -1959,7 +2056,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			// 初始值使用源文件内容，而不是渲染后的文本
 			if (file) {
 				try {
-					editor.value = await this.app.vault.read(file);
+					let content = await this.app.vault.read(file);
+					// 根据设置决定是否显示属性
+					if (!this.settings.showPropertiesInEdit) {
+						content = this.removeFrontmatter(content);
+					}
+					editor.value = content;
 				} catch {
 					editor.value = embedContent.textContent || '';
 				}
@@ -1968,6 +2070,12 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			}
 			// 插入编辑器（保留 originalContainer）
 			embedContent.appendChild(editor);
+
+			// 自动调整编辑器高度以适应内容
+			// 需要在下一帧执行，确保DOM已更新
+			setTimeout(() => {
+				this.autoResizeTextarea(editor as HTMLTextAreaElement);
+			}, 0);
 
             // 不再创建额外预览容器，沿用 Obsidian 渲染（保持单窗口）
 		}
@@ -2391,7 +2499,18 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			this.editingFiles.add(file.path);
 
 			// 获取编辑后的内容（textarea 的值）
-			const newContent = editor.value;
+			let newContent = editor.value;
+
+			// 如果编辑时隐藏了属性，需要保留原文件的 frontmatter
+			if (!this.settings.showPropertiesInEdit) {
+				const originalContent = await this.app.vault.read(file);
+				const frontmatter = this.extractFrontmatter(originalContent);
+				
+				// 如果原文件有 frontmatter，将其添加到新内容前面
+				if (frontmatter) {
+					newContent = frontmatter + '\n' + newContent;
+				}
+			}
 
 			// 保存到文件
 			await this.app.vault.modify(file, newContent);
@@ -2826,6 +2945,17 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 				}));
 
         // 移除"编辑预览（数学等）"设置项，回退到单窗口体验
+
+		// 编辑时显示属性
+		new Setting(containerEl)
+			.setName('编辑时显示属性')
+			.setDesc('在编辑模式下显示文件的 frontmatter 属性（YAML）。关闭后，编辑时将不显示属性，但保存时会自动保留原文件的属性')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showPropertiesInEdit)
+				.onChange(async (value) => {
+					this.plugin.settings.showPropertiesInEdit = value;
+					await this.plugin.saveSettings();
+				}));
 
 		// 调试模式
 		new Setting(containerEl)
