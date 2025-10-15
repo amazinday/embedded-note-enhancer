@@ -347,3 +347,28 @@ span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="3"] {
 .embedded-note-toast.error {
 	color: var(--text-error);
 }
+
+/* 工具类 - 替代内联样式 */
+.embedded-note-hidden {
+	display: none !important;
+}
+
+.embedded-note-visible-inline {
+	display: inline-block !important;
+}
+
+.embedded-note-visible-block {
+	display: block !important;
+}
+
+.embedded-note-original-hidden {
+	display: none;
+}
+
+.embedded-note-editor-disabled {
+	pointer-events: none;
+}
+
+.embedded-note-relative {
+	position: relative;
+}

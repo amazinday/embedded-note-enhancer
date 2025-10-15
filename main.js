@@ -1086,7 +1086,9 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         const activeFile = this.app.workspace.getActiveFile();
         let file = this.app.metadataCache.getFirstLinkpathDest(fileName, (activeFile == null ? void 0 : activeFile.path) || "");
         if (!file) {
-          file = this.app.vault.getAbstractFileByPath(fileName) || this.app.vault.getAbstractFileByPath(`${fileName}.md`);
+          const direct = this.app.vault.getAbstractFileByPath(fileName);
+          const withMd = this.app.vault.getAbstractFileByPath(`${fileName}.md`);
+          file = (direct instanceof import_obsidian.TFile ? direct : null) || (withMd instanceof import_obsidian.TFile ? withMd : null);
         }
         if (file) {
           this.app.vault.read(file).then((md) => {
@@ -1183,11 +1185,15 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const editBtn = document.createElement("button");
     editBtn.className = "embedded-note-edit-btn";
     editBtn.textContent = "\u7F16\u8F91";
-    editBtn.style.display = this.settings.showEditButton ? "inline-block" : "none";
+    if (!this.settings.showEditButton) {
+      editBtn.classList.add("embedded-note-hidden");
+    }
     const jumpBtn = document.createElement("button");
     jumpBtn.className = "embedded-note-jump-btn";
     jumpBtn.textContent = "\u8DF3\u8F6C";
-    jumpBtn.style.display = this.settings.showJumpButton ? "inline-block" : "none";
+    if (!this.settings.showJumpButton) {
+      jumpBtn.classList.add("embedded-note-hidden");
+    }
     titleBar.appendChild(titleText);
     if (this.settings.showCollapseIcon && titleBar.getAttribute("data-editing") !== "true") {
       titleBar.appendChild(collapseIcon);
@@ -1229,9 +1235,9 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         editBtn.textContent = "\u7F16\u8F91";
         const icon = titleBar.querySelector(".embedded-note-collapse-icon");
         if (this.settings.showCollapseIcon) {
-          if (icon)
-            icon.style.display = "block";
-          else {
+          if (icon) {
+            icon.classList.remove("embedded-note-hidden");
+          } else {
             const newIcon = document.createElement("span");
             newIcon.className = "embedded-note-collapse-icon";
             newIcon.textContent = "\u25BC";
@@ -1248,7 +1254,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
             editBtn.textContent = "\u5B8C\u6210";
             const icon = titleBar.querySelector(".embedded-note-collapse-icon");
             if (icon)
-              icon.style.display = "none";
+              icon.classList.add("embedded-note-hidden");
           }, 100);
         } else {
           this.enableInlineEditing(block);
@@ -1256,7 +1262,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
           editBtn.textContent = "\u5B8C\u6210";
           const icon = titleBar.querySelector(".embedded-note-collapse-icon");
           if (icon)
-            icon.style.display = "none";
+            icon.classList.add("embedded-note-hidden");
         }
       }
     };
@@ -1279,7 +1285,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
       if (!file) {
         const direct = this.app.vault.getAbstractFileByPath(fileName);
         const withMd = this.app.vault.getAbstractFileByPath(`${fileName}.md`);
-        file = direct || withMd;
+        file = (direct instanceof import_obsidian.TFile ? direct : null) || (withMd instanceof import_obsidian.TFile ? withMd : null);
       }
       if (file) {
         if (this.settings.jumpInNewTab) {
@@ -1370,7 +1376,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (preview)
       preview.remove();
     if (originalContainer) {
-      originalContainer.style.display = "";
+      originalContainer.classList.remove("embedded-note-original-hidden");
       const nodesToRestore = Array.from(originalContainer.childNodes);
       nodesToRestore.forEach((child) => {
         embedContent.insertBefore(child, originalContainer);
@@ -1379,7 +1385,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     } else if (editor) {
       editor.readOnly = true;
       editor.disabled = true;
-      editor.style.pointerEvents = "none";
+      editor.classList.add("embedded-note-editor-disabled");
       editor.oninput = null;
     }
     const indicator = embedContent.querySelector(".embedded-note-edit-indicator");
@@ -1618,7 +1624,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
         }
         embedContent.appendChild(originalContainer);
       }
-      originalContainer.style.display = "none";
+      originalContainer.classList.add("embedded-note-original-hidden");
       editor = document.createElement("textarea");
       editor.className = "embedded-note-editor";
       if (file) {
@@ -1658,9 +1664,9 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     if (!file) {
       const direct = this.app.vault.getAbstractFileByPath(fileLink);
       const withMd = this.app.vault.getAbstractFileByPath(`${fileLink}.md`);
-      file = direct || withMd;
+      file = (direct instanceof import_obsidian.TFile ? direct : null) || (withMd instanceof import_obsidian.TFile ? withMd : null);
     }
-    return file;
+    return file instanceof import_obsidian.TFile ? file : null;
   }
   /** 检查嵌入引用的文件是否存在 */
   checkEmbedFileExists(block) {
@@ -2014,7 +2020,10 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     toast.textContent = success ? "\u2705 \u5DF2\u4FDD\u5B58" : "\u274C \u4FDD\u5B58\u5931\u8D25";
     toast.className = success ? "embedded-note-toast" : "embedded-note-toast error";
     const host = targetEl.parentElement || targetEl;
-    host.style.position = host.style.position || "relative";
+    const computedPosition = window.getComputedStyle(host).position;
+    if (computedPosition === "static") {
+      host.classList.add("embedded-note-relative");
+    }
     host.appendChild(toast);
     setTimeout(() => toast.remove(), 1400);
   }
@@ -2319,21 +2328,33 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
         collapseIcon = this.createCollapseIcon();
         titleBarElement.appendChild(collapseIcon);
       } else if (collapseIcon) {
-        collapseIcon.style.display = this.plugin.settings.showCollapseIcon && !isEditing ? "block" : "none";
+        if (this.plugin.settings.showCollapseIcon && !isEditing) {
+          collapseIcon.classList.remove("embedded-note-hidden");
+        } else {
+          collapseIcon.classList.add("embedded-note-hidden");
+        }
       }
       let editBtn = titleBarElement.querySelector(".embedded-note-edit-btn");
       if (this.plugin.settings.showEditButton && !editBtn) {
         editBtn = this.createEditButton(titleBarElement);
         titleBarElement.appendChild(editBtn);
       } else if (editBtn) {
-        editBtn.style.display = this.plugin.settings.showEditButton ? "inline-block" : "none";
+        if (this.plugin.settings.showEditButton) {
+          editBtn.classList.remove("embedded-note-hidden");
+        } else {
+          editBtn.classList.add("embedded-note-hidden");
+        }
       }
       let jumpBtn = titleBarElement.querySelector(".embedded-note-jump-btn");
       if (this.plugin.settings.showJumpButton && !jumpBtn) {
         jumpBtn = this.createJumpButton(titleBarElement);
         titleBarElement.appendChild(jumpBtn);
       } else if (jumpBtn) {
-        jumpBtn.style.display = this.plugin.settings.showJumpButton ? "inline-block" : "none";
+        if (this.plugin.settings.showJumpButton) {
+          jumpBtn.classList.remove("embedded-note-hidden");
+        } else {
+          jumpBtn.classList.add("embedded-note-hidden");
+        }
       }
       const block = titleBarElement.closest(".markdown-embed");
       if (block) {

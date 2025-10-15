@@ -1330,10 +1330,11 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				block.appendChild(container);
 				// 渲染源文件内容
 				const activeFile = this.app.workspace.getActiveFile();
-				let file = this.app.metadataCache.getFirstLinkpathDest(fileName, activeFile?.path || '') as TFile | null;
+				let file = this.app.metadataCache.getFirstLinkpathDest(fileName, activeFile?.path || '');
 				if (!file) {
-					file = this.app.vault.getAbstractFileByPath(fileName) as TFile | null ||
-						this.app.vault.getAbstractFileByPath(`${fileName}.md`) as TFile | null;
+					const direct = this.app.vault.getAbstractFileByPath(fileName);
+					const withMd = this.app.vault.getAbstractFileByPath(`${fileName}.md`);
+					file = (direct instanceof TFile ? direct : null) || (withMd instanceof TFile ? withMd : null);
 				}
 				if (file) {
 					this.app.vault.read(file)
@@ -1471,13 +1472,17 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		const editBtn = document.createElement('button');
 		editBtn.className = 'embedded-note-edit-btn';
 		editBtn.textContent = '编辑';
-		editBtn.style.display = this.settings.showEditButton ? 'inline-block' : 'none';
+		if (!this.settings.showEditButton) {
+			editBtn.classList.add('embedded-note-hidden');
+		}
 
 		// 创建跳转按钮
 		const jumpBtn = document.createElement('button');
 		jumpBtn.className = 'embedded-note-jump-btn';
 		jumpBtn.textContent = '跳转';
-		jumpBtn.style.display = this.settings.showJumpButton ? 'inline-block' : 'none';
+		if (!this.settings.showJumpButton) {
+			jumpBtn.classList.add('embedded-note-hidden');
+		}
 
 		titleBar.appendChild(titleText);
 		// 非编辑状态且设置开启时才显示折叠图标
@@ -1529,8 +1534,9 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				// 退出编辑时恢复折叠图标显示（若设置允许）
 				const icon = titleBar.querySelector('.embedded-note-collapse-icon') as HTMLElement | null;
 				if (this.settings.showCollapseIcon) {
-					if (icon) icon.style.display = 'block';
-					else {
+					if (icon) {
+						icon.classList.remove('embedded-note-hidden');
+					} else {
 						const newIcon = document.createElement('span');
 						newIcon.className = 'embedded-note-collapse-icon';
 						newIcon.textContent = '▼';
@@ -1550,7 +1556,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 						editBtn.textContent = '完成';
 						// 进入编辑时隐藏折叠图标
 						const icon = titleBar.querySelector('.embedded-note-collapse-icon') as HTMLElement | null;
-						if (icon) icon.style.display = 'none';
+						if (icon) icon.classList.add('embedded-note-hidden');
 					}, 100); // 短暂延迟确保展开完成
 				} else {
 					// 如果已经展开，直接启用编辑
@@ -1559,7 +1565,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				editBtn.textContent = '完成';
 				// 进入编辑时隐藏折叠图标
 				const icon = titleBar.querySelector('.embedded-note-collapse-icon') as HTMLElement | null;
-				if (icon) icon.style.display = 'none';
+				if (icon) icon.classList.add('embedded-note-hidden');
 				}
 			}
 		};
@@ -1581,11 +1587,11 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	private jumpToFile(fileName: string) {
 		try {
 			const activeFile = this.app.workspace.getActiveFile();
-			let file = this.app.metadataCache.getFirstLinkpathDest(fileName, activeFile?.path || '') as TFile | null;
+			let file = this.app.metadataCache.getFirstLinkpathDest(fileName, activeFile?.path || '');
 			if (!file) {
-				const direct = this.app.vault.getAbstractFileByPath(fileName) as TFile | null;
-				const withMd = this.app.vault.getAbstractFileByPath(`${fileName}.md`) as TFile | null;
-				file = direct || withMd;
+				const direct = this.app.vault.getAbstractFileByPath(fileName);
+				const withMd = this.app.vault.getAbstractFileByPath(`${fileName}.md`);
+				file = (direct instanceof TFile ? direct : null) || (withMd instanceof TFile ? withMd : null);
 			}
 			
 			if (file) {
@@ -1701,7 +1707,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		if (preview) preview.remove();
         if (originalContainer) {
             // 将 originalContainer 的内容移回到 embedContent，并移除 originalContainer
-            originalContainer.style.display = '';
+            originalContainer.classList.remove('embedded-note-original-hidden');
             const nodesToRestore = Array.from(originalContainer.childNodes);
             nodesToRestore.forEach((child) => {
                 embedContent.insertBefore(child, originalContainer);
@@ -1711,7 +1717,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 			// 兜底：若无原始容器，则将编辑器置为只读
 			editor.readOnly = true;
 			editor.disabled = true;
-			editor.style.pointerEvents = 'none';
+			editor.classList.add('embedded-note-editor-disabled');
 			editor.oninput = null;
 		}
 
@@ -2049,7 +2055,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 				}
 				embedContent.appendChild(originalContainer);
 			}
-			(originalContainer as HTMLElement).style.display = 'none';
+			originalContainer.classList.add('embedded-note-original-hidden');
 
 			editor = document.createElement('textarea');
 			editor.className = 'embedded-note-editor';
@@ -2098,13 +2104,13 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		const fileLink = block.getAttribute('data-file-link') || titleBar?.textContent?.trim() || '';
 		if (!fileLink) return null;
 		const activeFile = this.app.workspace.getActiveFile();
-		let file = this.app.metadataCache.getFirstLinkpathDest(fileLink, activeFile?.path || '') as TFile | null;
+		let file = this.app.metadataCache.getFirstLinkpathDest(fileLink, activeFile?.path || '');
 		if (!file) {
-			const direct = this.app.vault.getAbstractFileByPath(fileLink) as TFile | null;
-			const withMd = this.app.vault.getAbstractFileByPath(`${fileLink}.md`) as TFile | null;
-			file = direct || withMd;
+			const direct = this.app.vault.getAbstractFileByPath(fileLink);
+			const withMd = this.app.vault.getAbstractFileByPath(`${fileLink}.md`);
+			file = (direct instanceof TFile ? direct : null) || (withMd instanceof TFile ? withMd : null);
 		}
-		return file;
+		return file instanceof TFile ? file : null;
 	}
 
 	/** 检查嵌入引用的文件是否存在 */
@@ -2543,7 +2549,10 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		toast.textContent = success ? '✅ 已保存' : '❌ 保存失败';
 		toast.className = success ? 'embedded-note-toast' : 'embedded-note-toast error';
 		const host = targetEl.parentElement || targetEl;
-		host.style.position = host.style.position || 'relative';
+		const computedPosition = window.getComputedStyle(host).position;
+		if (computedPosition === 'static') {
+			host.classList.add('embedded-note-relative');
+		}
 		host.appendChild(toast);
 		setTimeout(() => toast.remove(), 1400);
 	}
@@ -3046,7 +3055,11 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 				collapseIcon = this.createCollapseIcon();
 				titleBarElement.appendChild(collapseIcon);
 		} else if (collapseIcon) {
-			collapseIcon.style.display = this.plugin.settings.showCollapseIcon && !isEditing ? 'block' : 'none';
+			if (this.plugin.settings.showCollapseIcon && !isEditing) {
+				collapseIcon.classList.remove('embedded-note-hidden');
+			} else {
+				collapseIcon.classList.add('embedded-note-hidden');
+			}
 			}
 
 			// 处理编辑按钮
@@ -3056,7 +3069,11 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 				editBtn = this.createEditButton(titleBarElement);
 				titleBarElement.appendChild(editBtn);
 			} else if (editBtn) {
-				editBtn.style.display = this.plugin.settings.showEditButton ? 'inline-block' : 'none';
+				if (this.plugin.settings.showEditButton) {
+					editBtn.classList.remove('embedded-note-hidden');
+				} else {
+					editBtn.classList.add('embedded-note-hidden');
+				}
 			}
 
 			// 处理跳转按钮
@@ -3066,7 +3083,11 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 				jumpBtn = this.createJumpButton(titleBarElement);
 				titleBarElement.appendChild(jumpBtn);
 			} else if (jumpBtn) {
-				jumpBtn.style.display = this.plugin.settings.showJumpButton ? 'inline-block' : 'none';
+				if (this.plugin.settings.showJumpButton) {
+					jumpBtn.classList.remove('embedded-note-hidden');
+				} else {
+					jumpBtn.classList.add('embedded-note-hidden');
+				}
 			}
 
 			// 当用户关闭原地编辑时，立即将对应内容置为只读
