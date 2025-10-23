@@ -1,5 +1,11 @@
 /* Embedded Note Enhancer Plugin Styles */
 
+/* CSS Custom Properties for dynamic settings */
+:root {
+	--embedded-note-font-size: 14px;
+	--embedded-note-editor-height: auto;
+}
+
 .embedded-note-title-bar {
 	position: relative;
 	z-index: 1;
@@ -8,7 +14,7 @@
 	width: 100%;
 	background-color: var(--background-secondary);
 	color: var(--interactive-accent, var(--text-accent, var(--accent, #7c3aed)));
-	font-size: 14px;
+	font-size: var(--embedded-note-font-size);
 	padding: 8px 12px;
 	border-bottom: 1px solid var(--background-modifier-border);
 	cursor: pointer;
@@ -260,6 +266,8 @@ span.internal-embed[data-embedded-note-enhanced="true"][data-nest-level="3"] {
 	font-size: var(--editor-font-size);
 	line-height: 1.5;
 	resize: vertical;
+	height: var(--embedded-note-editor-height);
+	overflow-y: hidden;
 }
 
 /* 嵌套嵌入内容的过渡效果 */

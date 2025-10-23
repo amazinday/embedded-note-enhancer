@@ -156,6 +156,7 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
   async onload() {
     this.log("Plugin loading...");
     await this.loadSettings();
+    document.documentElement.style.setProperty("--embedded-note-font-size", this.settings.fontSize);
     this.restoreCollapseStates();
     this.addSettingTab(new EmbeddedNoteEnhancerSettingTab(this.app, this));
     this.initializePlugin();
@@ -1172,7 +1173,6 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
     const titleBar = document.createElement("div");
     titleBar.className = "embedded-note-title-bar";
     titleBar.setAttribute("data-block-id", blockId);
-    titleBar.style.fontSize = this.settings.fontSize;
     const titleText = document.createElement("span");
     titleText.textContent = fileName;
     titleText.className = "embedded-note-title-text";
@@ -1588,12 +1588,11 @@ var EmbeddedNoteEnhancerPlugin = class extends import_obsidian.Plugin {
    * 自动调整 textarea 高度以适应内容
    */
   autoResizeTextarea(textarea) {
-    textarea.style.height = "auto";
     const scrollHeight = textarea.scrollHeight;
     const minHeight = 140;
     const maxHeight = window.innerHeight * 0.6;
     const finalHeight = Math.max(minHeight, Math.min(scrollHeight + 10, maxHeight));
-    textarea.style.height = `${finalHeight}px`;
+    document.documentElement.style.setProperty("--embedded-note-editor-height", `${finalHeight}px`);
     this.log(`Auto-resized textarea: ${finalHeight}px (content: ${scrollHeight}px)`);
   }
   /**
@@ -2317,10 +2316,10 @@ var EmbeddedNoteEnhancerSettingTab = class extends import_obsidian.PluginSetting
    * 更新标题栏样式
    */
   updateTitleBarStyles() {
+    document.documentElement.style.setProperty("--embedded-note-font-size", this.plugin.settings.fontSize);
     const titleBars = document.querySelectorAll(".embedded-note-title-bar");
     titleBars.forEach((titleBar) => {
       const titleBarElement = titleBar;
-      titleBarElement.style.fontSize = this.plugin.settings.fontSize;
       let collapseIcon = titleBarElement.querySelector(".embedded-note-collapse-icon");
       const hostBlock = titleBarElement.closest(".markdown-embed, .internal-embed");
       const isEditing = (hostBlock == null ? void 0 : hostBlock.getAttribute("data-editing")) === "true";

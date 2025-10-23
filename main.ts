@@ -157,6 +157,9 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		this.log('Plugin loading...');
 		await this.loadSettings();
 
+		// Initialize CSS custom properties with settings values
+		document.documentElement.style.setProperty('--embedded-note-font-size', this.settings.fontSize);
+
 		// 恢复保存的折叠状态
 		this.restoreCollapseStates();
 
@@ -1450,8 +1453,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		titleBar.className = 'embedded-note-title-bar';
 		titleBar.setAttribute('data-block-id', blockId);
 		
-		// 移除直接样式设置，使用CSS类
-		titleBar.style.fontSize = this.settings.fontSize;
+		// Font size is now controlled via CSS custom property set in addStyles()
 
 		// 移除嵌套层级指示器，改为通过缩进和边框来区分层级
 
@@ -2003,10 +2005,7 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 	 * 自动调整 textarea 高度以适应内容
 	 */
 	private autoResizeTextarea(textarea: HTMLTextAreaElement) {
-		// 临时设置高度为auto来获取scrollHeight
-		textarea.style.height = 'auto';
-		
-		// 计算需要的高度（内容高度 + 一些padding）
+		// Use data attribute to control height via CSS instead of inline styles
 		const scrollHeight = textarea.scrollHeight;
 		
 		// 设置最小高度为140px（与CSS中的min-height一致）
@@ -2017,7 +2016,8 @@ export default class EmbeddedNoteEnhancerPlugin extends Plugin {
 		// 计算最终高度
 		const finalHeight = Math.max(minHeight, Math.min(scrollHeight + 10, maxHeight));
 		
-		textarea.style.height = `${finalHeight}px`;
+		// Set height via CSS custom property instead of inline style
+		document.documentElement.style.setProperty('--embedded-note-editor-height', `${finalHeight}px`);
 		
 		this.log(`Auto-resized textarea: ${finalHeight}px (content: ${scrollHeight}px)`);
 	}
@@ -3039,11 +3039,12 @@ class EmbeddedNoteEnhancerSettingTab extends PluginSettingTab {
 	 * 更新标题栏样式
 	 */
 	private updateTitleBarStyles() {
+		// Update font size via CSS custom property instead of inline styles
+		document.documentElement.style.setProperty('--embedded-note-font-size', this.plugin.settings.fontSize);
+		
 		const titleBars = document.querySelectorAll('.embedded-note-title-bar');
 		titleBars.forEach((titleBar) => {
 			const titleBarElement = titleBar as HTMLElement;
-			// 使用Obsidian主题变量，不设置颜色
-			titleBarElement.style.fontSize = this.plugin.settings.fontSize;
 			
 			// 处理折叠图标
 			let collapseIcon = titleBarElement.querySelector('.embedded-note-collapse-icon') as HTMLElement;
