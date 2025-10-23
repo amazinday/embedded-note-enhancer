@@ -3,7 +3,7 @@
 	"name": "Embedded Note Enhancer",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "为嵌入的笔记添加可点击的标题栏，支持折叠/展开和原地编辑功能",
+	"description": "为嵌入的笔记添加可交互的标题栏，支持折叠/展开、原地编辑和快速跳转功能",
 	"author": "amazinday",
 	"authorUrl": "",
 	"fundingUrl": "",
